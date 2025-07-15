@@ -21,6 +21,10 @@ def _attn_fwd(Q, K, V, M, softmax_scale, causal, #pointers
     index_head = index_batch_head % NUM_HEADS
     # REMEMBER, NOTE When we pass the tensor to triton it just gets a pointer, we just get the starting pointer of it
     # but then how do we access the tensor? (offset)
+    qkv_offset = (
+        index_batch.to(tl.int64) * stride_Q_batch,
+         + index_head.to(tl.int64) * stride_Q_heads
+    )
 
     
     
