@@ -14,7 +14,12 @@ def _attn_fwd(Q, K, V, M, softmax_scale, causal,
     
     #? tl.static_assert(BLOCK_SIZE_KV <= HEAD_DIM)
 
+    # REMEMBER, NOTE When we pass the tensor to triton it just gets a pointer, we just get the starting pointer of it
 
+
+    # specify proigram id, which block in the sequence to process (tl.program_id(0), 1)
+    #
+  
 
     
 class TritonAttention(torch.autograd.Function):
