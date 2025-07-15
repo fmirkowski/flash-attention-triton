@@ -3,7 +3,7 @@ import triton
 import triton.language as tl
 
 @triton.jit
-def _attn_fwd(Q, K, V, M, softmax_scale, causal,
+def _attn_fwd(Q, K, V, M, softmax_scale, causal, #pointers
                 stride_Q_batch, stride_Q_heads, stride_Q_seq, stride_Q_dim,
                 stride_K_batch, stride_K_heads, stride_K_seq, stride_K_dim,
                 stride_V_batch, stride_V_heads, stride_V_seq, stride_V_dim,
@@ -13,12 +13,17 @@ def _attn_fwd(Q, K, V, M, softmax_scale, causal,
                 BLOCK_SIZE_KV: tl.constexpr, BLOCK_SIZE_Q: tl.constexpr):
     
     #? tl.static_assert(BLOCK_SIZE_KV <= HEAD_DIM)
-
-    # REMEMBER, NOTE When we pass the tensor to triton it just gets a pointer, we just get the starting pointer of it
-
-
     # specify proigram id, which block in the sequence to process (tl.program_id(0), 1)
-    #
+
+    block_index_q = tl.program_id(0)
+    index_batch_head = tl.program_id(1) # flattened, combinations of some BATCH_SIZE[i] and NUM_HEADS[j]
+    index_batch = index_batch_head // NUM_HEADS
+    index_head = index_batch_head % NUM_HEADS
+    # REMEMBER, NOTE When we pass the tensor to triton it just gets a pointer, we just get the starting pointer of it
+    # but then how do we access the tensor? (offset)
+
+    
+    
   
 
     
