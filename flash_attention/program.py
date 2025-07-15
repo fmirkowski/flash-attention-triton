@@ -28,6 +28,17 @@ def _attn_fwd(Q, K, V, M, softmax_scale, causal, #pointers
          + index_head.to(tl.int64) * stride_Q_heads
     )
 
+    Q_block_ptr = tl.make_block_ptr(
+        base=Q + qkv_offset, # take a pointer, pointing at particular batch and there particular head it should be working with Q[index_batch, index_head, :, :]
+        shape=(SEQ_LEN, HEAD_DIM),  
+        strides=(stride_Q_seq, stride_Q_dim),
+        offsets=(block_index_q * BLOCK_SIZE_Q, 0), # whats the difference between offsets and base
+        block_shape=(BLOCK_SIZE_Q, HEAD_DIM)
+
+    )
+
+    # but wait how does triton select which porgram to work with?
+
     
     
   
