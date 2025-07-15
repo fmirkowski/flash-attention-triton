@@ -35,8 +35,20 @@ def _attn_fwd(Q, K, V, M, softmax_scale, causal, #pointers
         offsets=(block_index_q * BLOCK_SIZE_Q, 0), # whats the difference between offsets and base
         block_shape=(BLOCK_SIZE_Q, HEAD_DIM),
         order=(0,1)
-
     )
+
+    # needs to be transposed
+
+    K_block_ptr = tl.make_block_ptr(
+        base=K + qkv_offset, 
+        shape=(HEAD_DIM, SEQ_LEN),  
+        strides=(stride_K_dim, stride_K_seq),
+        offsets=(0, 0), # why 0, 0 again?
+        block_shape=(BLOCK_SIZE_KV, HEAD_DIM),
+        order=(0,1)
+    )
+    
+    
 
     # but wait how does triton select which porgram to work with?
 
