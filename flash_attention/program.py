@@ -48,7 +48,14 @@ def _attn_fwd(Q, K, V, M, softmax_scale, causal, #pointers
         order=(0,1)
     )
     
-    
+    V_block_ptr = tl.make_block_ptr(
+        base=V + qkv_offset, 
+        shape=(SEQ_LEN, HEAD_DIM),  
+        strides=(stride_V_seq, stride_V_dim),
+        offsets=(0, 0), 
+        block_shape=(BLOCK_SIZE_Q, HEAD_DIM),
+        order=(0,1)
+    )
 
     # but wait how does triton select which porgram to work with?
 
