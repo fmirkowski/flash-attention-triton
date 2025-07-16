@@ -12,7 +12,7 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
                 HEAD_DIM: tl.constexpr, STAGE: tl.constexpr, 
                 BLOCK_SIZE_KV: tl.constexpr, BLOCK_SIZE_Q: tl.constexpr):
     
-    #? tl.static_assert(BLOCK_SIZE_KV <= HEAD_DIM)
+    tl.static_assert(BLOCK_SIZE_KV <= HEAD_DIM)
     # specify proigram id, which block in the sequence to process (tl.program_id(0), 1)
     # Remember, here: a specfic ONE program is launched, a combination of the grid (of shape of the tuple and bounnds)
     block_index_q = tl.program_id(0)
@@ -32,7 +32,7 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
         base=Q + qkv_offset, # take a pointer, pointing at particular batch and there particular head it should be working with Q[index_batch, index_head, :, :]
         shape=(SEQ_LEN, HEAD_DIM),  
         strides=(stride_Q_seq, stride_Q_dim),
-        offsets=(block_index_q * BLOCK_SIZE_Q, 0), # whats the difference between offsets and base – in offsets 
+        offsets=(block_index_q * BLOCK_SIZE_Q, 0), # whats the difference between offsets and base – basically the same but in offset we specify index which is more convenient, we could also move all offsets to base and just multiply by coresponding strides and vice-versa
         block_shape=(BLOCK_SIZE_Q, HEAD_DIM),
         order=(0,1)
     )
