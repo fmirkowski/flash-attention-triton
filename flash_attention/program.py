@@ -71,7 +71,11 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
 
     # We parrallelise each program by the query block (right now we just select the right q block)
 
-    # tl.arrange mn
+    offsets_q = BLOCK_SIZE_Q * block_index_q + tl.arrange(0, BLOCK_SIZE_Q) # loading particular queries
+    offsets_v = tl.arrange(0, BLOCK_SIZE_KV) # loading particular queries
+    offsets_k = tl.arrange(0, BLOCK_SIZE_KV) # loading particular queries
+    
+
     
     
   
