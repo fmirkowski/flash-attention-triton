@@ -72,9 +72,32 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
     # We parrallelise each program by the query block (right now we just select the right q block)
 
     offsets_q = BLOCK_SIZE_Q * block_index_q + tl.arrange(0, BLOCK_SIZE_Q) # loading particular queries
-    offsets_v = tl.arrange(0, BLOCK_SIZE_KV) # loading particular queries
-    offsets_k = tl.arrange(0, BLOCK_SIZE_KV) # loading particular queries
+    offsets_kv = tl.arrange(0, BLOCK_SIZE_KV) # loading particular queries, this is not a specific place in memory, remember – its just offset, where do we have to move (ie index) thats why it can be the same for both key and value
+    # running maximum for each query block Q_i
+    m_i = tl.zeros([BLOCK_SIZE_Q], dtype=tl.float32) - float('inf')
+
+    #  initlaisatpon
+
+    # and inenr loop now, with max computing, split into 2 steps - causal and non causal, we either have to compute it or not, we first do nomral attention non-causal, and basically skip all and mask it all out
     
+    # hint for init:
+
+    # O_block, l_i, m_i = _attn_fwd_inner(
+    #         O_block,
+    #         l_i,
+    #         m_i,
+    #         Q_block,
+    #         K_block_ptr,
+    #         V_block_ptr,
+    #         block_index_q,
+    #         softmax_scale,
+    #         BLOCK_SIZE_Q,
+    #         BLOCK_SIZE_KV,
+    #         4 - STAGE,
+    #         offs_q,
+    #         offs_kv,
+    #         SEQ_LEN,
+    #     )
 
     
     
