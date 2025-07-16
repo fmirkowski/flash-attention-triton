@@ -3,7 +3,7 @@ import triton
 import triton.language as tl
 
 @triton.jit
-def _attn_fwd(Q, K, V, M, softmax_scale, causal, #pointers
+def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
                 stride_Q_batch, stride_Q_heads, stride_Q_seq, stride_Q_dim,
                 stride_K_batch, stride_K_heads, stride_K_seq, stride_K_dim,
                 stride_V_batch, stride_V_heads, stride_V_seq, stride_V_dim,
@@ -14,7 +14,7 @@ def _attn_fwd(Q, K, V, M, softmax_scale, causal, #pointers
     
     #? tl.static_assert(BLOCK_SIZE_KV <= HEAD_DIM)
     # specify proigram id, which block in the sequence to process (tl.program_id(0), 1)
-
+    # Remember, here: a specfic ONE program is launched, a combination of the grid (of shape of the tuple and bounnds)
     block_index_q = tl.program_id(0)
     index_batch_head = tl.program_id(1) # flattened, combinations of some BATCH_SIZE[i] and NUM_HEADS[j]
     index_batch = index_batch_head // NUM_HEADS
@@ -32,7 +32,7 @@ def _attn_fwd(Q, K, V, M, softmax_scale, causal, #pointers
         base=Q + qkv_offset, # take a pointer, pointing at particular batch and there particular head it should be working with Q[index_batch, index_head, :, :]
         shape=(SEQ_LEN, HEAD_DIM),  
         strides=(stride_Q_seq, stride_Q_dim),
-        offsets=(block_index_q * BLOCK_SIZE_Q, 0), # whats the difference between offsets and base
+        offsets=(block_index_q * BLOCK_SIZE_Q, 0), # whats the difference between offsets and base – in offsets 
         block_shape=(BLOCK_SIZE_Q, HEAD_DIM),
         order=(0,1)
     )
@@ -40,10 +40,10 @@ def _attn_fwd(Q, K, V, M, softmax_scale, causal, #pointers
     # needs to be transposed
 
     K_block_ptr = tl.make_block_ptr(
-        base=K + qkv_offset, 
+        base=K + qkv_offset, # this is basically a memory address to the tensor we want to operate with (otherwise there is no way to identify!!  and we are adding offset to identify a specific batch and index;)
         shape=(HEAD_DIM, SEQ_LEN),  
         strides=(stride_K_dim, stride_K_seq),
-        offsets=(0, 0), # why 0, 0 again?
+        offsets=(0, 0), # 
         block_shape=(HEAD_DIM, BLOCK_SIZE_KV),
         order=(0,1)
     )
@@ -60,15 +60,18 @@ def _attn_fwd(Q, K, V, M, softmax_scale, causal, #pointers
     # Why this is wrong
     O_block_ptr = tl.make_block_ptr(
         base=O + qkv_offset, 
-        shape=(SEQ_LEN, SEQ_LEN),  
+        shape=(SEQ_LEN, HEAD_DIM),  
         strides=(stride_O_seq, stride_O_dim),
-        offsets=(0, 0),  # why 0,0?
-        block_shape=(BLOCK_SIZE_KV, HEAD_DIM),
+        offsets=(BLOCK_SIZE_Q * block_index_q, 0),  # why 0,0? We need to 
+        block_shape=(BLOCK_SIZE_Q, HEAD_DIM),
         order=(0,1)
     )
 
     # but wait how does triton select which porgram to work with?
 
+    # We parrallelise each program by the query block (right now we just select the right q block)
+
+    # tl.arrange mn
     
     
   
@@ -103,6 +106,7 @@ class TritonAttention(torch.autograd.Function):
             Q=Q,
             K=K,
             V=V,
+            O=O,
             M=M,
             softmax_scale=softmax_scale,
             causal=causal,
