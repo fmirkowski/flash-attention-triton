@@ -2,6 +2,26 @@ import torch
 import triton
 import triton.language as tl
 
+
+@triton.jit
+def _attn_fwd_inner(O_block,
+            l_i,
+            m_i,
+            Q_block,
+            K_block_ptr,
+            V_block_ptr,
+            block_index_q,
+            softmax_scale,
+            BLOCK_SIZE_Q,
+            BLOCK_SIZE_KV,
+            causal,
+            offsets_q,
+            offsets_kv,
+            SEQ_LEN):
+    p
+
+
+
 @triton.jit
 def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
                 stride_Q_batch, stride_Q_heads, stride_Q_seq, stride_Q_dim,
@@ -57,7 +77,6 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
         order=(0,1)
     )
 
-    # Why this is wrong
     O_block_ptr = tl.make_block_ptr(
         base=O + qkv_offset, 
         shape=(SEQ_LEN, HEAD_DIM),  
@@ -80,28 +99,50 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
     O_block = tl.zeros([BLOCK_SIZE_Q, HEAD_DIM], dtype=tl.float32)
 
     Q_block = tl.load(Q_block_ptr)
+    
+    O_block = tl.load(O_block_ptr)
     #  initlaisatpon
-
+    # we'll load K and V later, we'll load specific blocks to save on compute and not move the whole thing at once
+    
     # and inenr loop now, with max computing, split into 2 steps - causal and non causal, we either have to compute it or not, we first do nomral attention non-causal, and basically skip all and mask it all out
     
     # hint for init:
-
-    # O_block, l_i, m_i = _attn_fwd_inner(
-    #         O_block,
-    #         l_i,
-    #         m_i,
-    #         Q_block,
-    #         K_block_ptr,
-    #         V_block_ptr,
-    #         block_index_q,
-    #         softmax_scale,
-    #         BLOCK_SIZE_Q,
-    #         BLOCK_SIZE_KV,
-    #         4 - STAGE,
-    #         offs_q,
-    #         offs_kv,
-    #         SEQ_LEN,
-    #     )
+    if STAGE == 3 or STAGE == 1:
+            
+        O_block, l_i, m_i = _attn_fwd_inner(
+                O_block,
+                l_i,
+                m_i,
+                Q_block,
+                K_block_ptr,
+                V_block_ptr,
+                block_index_q,
+                softmax_scale,
+                BLOCK_SIZE_Q,
+                BLOCK_SIZE_KV,
+                4 - STAGE,
+                offsets_q,
+                offsets_kv,
+                SEQ_LEN
+            )
+    # we need this for the diagonal 
+    if STAGE == 3:
+        O_block, l_i, m_i = _attn_fwd_inner(
+                O_block,
+                l_i,
+                m_i,
+                Q_block,
+                K_block_ptr,
+                V_block_ptr,
+                block_index_q,
+                softmax_scale,
+                BLOCK_SIZE_Q,
+                BLOCK_SIZE_KV,
+                2,
+                offsets_q,
+                offsets_kv,
+                SEQ_LEN
+            )
 
     
     
