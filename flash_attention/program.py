@@ -14,12 +14,22 @@ def _attn_fwd_inner(O_block,
             softmax_scale,
             BLOCK_SIZE_Q: tl.constexpr,
             BLOCK_SIZE_KV: tl.constexpr,
-            causal: tl.constexpr,
+            STAGE: tl.constexpr,
             offsets_q,
             offsets_kv,
             SEQ_LEN: tl.constexpr):
-    
-    for j in range(BLOCK_SIZE_KV)
+    # Now we will define the lower and higher index that this particular stage should be working with, remeber this is the inner loop so its enough for us to define just the lower and higer for it
+    if STAGE == 1:
+        lower, higher = 0, block_index_q * BLOCK_SIZE_Q
+    elif STAGE == 2:
+        lower, higher = block_index_q * BLOCK_SIZE_Q, (block_index_q + 1) * BLOCK_SIZE_Q
+        lower = tl.multiple_of(lower, BLOCK_SIZE_Q) # tells tthose are multiples, so triton can do optimzations
+    else:
+        lower, higher = 0, SEQ_LEN
+
+    # point kv blocks to the first block (advance)
+     
+    for j in range(BLOCK_SIZE_KV):
 
 
 @triton.jit
@@ -107,8 +117,20 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
     # and inenr loop now, with max computing, split into 2 steps - causal and non causal, we either have to compute it or not, we first do nomral attention non-causal, and basically skip all and mask it all out
     
     # hint for init:
+    # we are calling twice for software pipelining
+    # 3 for casual 1 for non casual
+    
+    '''
+    NOTE:
+    So the pipeline is:
+        if attention is casual then:
+            compute the left side and after that the diagonal (in the second iteration)
+        if attention is non-casual then:
+            compute all and skip the second function (no casual is 1)
+    '''
+
     if STAGE == 3 or STAGE == 1:
-            
+        # in this step we're doing the causal attention or even non causal for the blocks that are on the left (we still have to do it in both cases, in one case it will be enough and the rest should be -inf (in the causal) and in the non causal we will still have to compute evrything)
         O_block, l_i, m_i = _attn_fwd_inner(
                 O_block,
                 l_i,
@@ -125,8 +147,9 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
                 offsets_kv,
                 SEQ_LEN
             )
-    # we need this for the diagonal 
+    
     if STAGE == 3:
+    # and in this step we're finsishing the diagonal of the diagonal for casual
         O_block, l_i, m_i = _attn_fwd_inner(
                 O_block,
                 l_i,
