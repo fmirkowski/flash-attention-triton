@@ -35,6 +35,7 @@ def _attn_fwd_inner(O_block,
     for start_kv in range(lower, higher, BLOCK_SIZE_KV):
         K_block = tl.load(K_block_ptr)
         QK_block = tl.dot(Q_block, K_block)
+        # differ?
         if STAGE == 2:
             mask = offsets_q[:, None] >= (start_kv + offsets_kv[None, :]) # because we're iterating on many blocks
             QK_block = QK_block * softmax_scale + tl.where(mask, 0, -1.0e6) # we need a float and tl.where creates a this, 1, BLOCK_SIZE vector
@@ -43,9 +44,16 @@ def _attn_fwd_inner(O_block,
             QK_block = QK_block * softmax_scale
             m_ij = tl.maximum(m_i, tl.max(QK_block, axis=1))
 
-        P_block = tl.exp(QK_block - m_ij[:, None])
-        alpha = tl.exp((m_i - m_ij))
+        P_block = tl.math.exp(QK_block - m_ij[:, None])
+        alpha = tl.math.exp((m_i - m_ij))
         l_i = l_i * alpha + tl.sum(P_block, 1)
+
+        V_block = tl.load(V_block_ptr)
+        P_block = P_block.to(tl.float16)
+        O_block = O_block * alpha[:, None] # Why am i doing None? because otherwise it wouldnt be able to do element wise (ie shape would mismatch) element wise is equivalent to diagonal
+        O_block = tl.dot(P_block, V_block, O_block) # equivalent too O*alpha + P @ V
+
+
 
 
 @triton.jit
