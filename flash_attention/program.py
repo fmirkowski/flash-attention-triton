@@ -55,6 +55,11 @@ def _attn_fwd_inner(O_block,
 
         m_i = m_ij
 
+        V_block_ptr = tl.advance(V_block_ptr, (BLOCK_SIZE_KV, 0))
+        K_block_ptr = tl.advance(K_block_ptr, (0, BLOCK_SIZE_KV))
+
+    return O_block, l_i, m_i
+
 
 
 @triton.jit
@@ -153,6 +158,8 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
         if attention is non-casual then:
             compute all and skip the second function (no casual is 1)
     '''
+
+    
 
     if STAGE == 3 or STAGE == 1:
         # in this step we're doing the causal attention or even non causal for the blocks that are on the left (we still have to do it in both cases, in one case it will be enough and the rest should be -inf (in the causal) and in the non causal we will still have to compute evrything)
