@@ -53,6 +53,7 @@ def _attn_fwd_inner(O_block,
         O_block = O_block * alpha[:, None] # Why am i doing None? because otherwise it wouldnt be able to do element wise (ie shape would mismatch) element wise is equivalent to diagonal
         O_block = tl.dot(P_block, V_block, O_block) # equivalent too O*alpha + P @ V
 
+        m_i = m_ij
 
 
 
