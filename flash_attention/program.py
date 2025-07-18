@@ -12,14 +12,14 @@ def _attn_fwd_inner(O_block,
             V_block_ptr,
             block_index_q,
             softmax_scale,
-            BLOCK_SIZE_Q,
-            BLOCK_SIZE_KV,
-            causal,
+            BLOCK_SIZE_Q: tl.constexpr,
+            BLOCK_SIZE_KV: tl.constexpr,
+            causal: tl.constexpr,
             offsets_q,
             offsets_kv,
-            SEQ_LEN):
-    p
-
+            SEQ_LEN: tl.constexpr):
+    
+    for j in range(BLOCK_SIZE_KV)
 
 
 @triton.jit
