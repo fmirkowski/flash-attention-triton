@@ -27,9 +27,25 @@ def _attn_fwd_inner(O_block,
     else:
         lower, higher = 0, SEQ_LEN
 
-    # point kv blocks to the first block (advance)
-     
-    for j in range(BLOCK_SIZE_KV):
+    # point kv blocks to the first block (advance), we're moving them to lower
+    K_block_ptr = tl.advance(K_block_ptr, (0, lower))
+    V_block_ptr = tl.advance(V_block_ptr, (lower, 0))
+    
+    # loop from lower to higher, load QK, load K (not V now), dot product, compute mask , apply mask + softmax ascale on qk block, compute running maximum
+    for start_kv in range(lower, higher, BLOCK_SIZE_KV):
+        K_block = tl.load(K_block_ptr)
+        QK_block = tl.dot(Q_block, K_block)
+        if STAGE == 2:
+            mask = offsets_q[:, None] >= (start_kv + offsets_kv[None, :]) # because we're iterating on many blocks
+            QK_block = QK_block * softmax_scale + tl.where(mask, 0, -1.0e6) # we need a float and tl.where creates a this, 1, BLOCK_SIZE vector
+            m_ij = tl.maximum(m_i, tl.max(QK_block, axis=1))
+        else: 
+            QK_block = QK_block * softmax_scale
+            m_ij = tl.maximum(m_i, tl.max(QK_block, axis=1))
+
+        P_block = tl.exp(QK_block - m_ij[:, None])
+        alpha = tl.exp((m_i - m_ij))
+        l_i = l_i * alpha + tl.sum(P_block, 1)
 
 
 @triton.jit
@@ -119,7 +135,7 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
     # hint for init:
     # we are calling twice for software pipelining
     # 3 for casual 1 for non casual
-    
+
     '''
     NOTE:
     So the pipeline is:
