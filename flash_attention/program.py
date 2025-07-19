@@ -204,7 +204,8 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
     O_block = O_block / l_i[:, None]
     # then we need to access the pointer to m to specific qoffset q and seq len
     m_ptrs = M + index_batch_head * SEQ_LEN + offsets_q
-    
+    tl.store(m_ptrs, m_i)
+    tl.store(O_block_ptr, O_block.to(O.type.element_ty))
 
     # store everyhting 
   
