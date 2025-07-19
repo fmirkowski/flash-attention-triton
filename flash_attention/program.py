@@ -121,7 +121,7 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
         base=O + qkv_offset, 
         shape=(SEQ_LEN, HEAD_DIM),  
         strides=(stride_O_seq, stride_O_dim),
-        offsets=(BLOCK_SIZE_Q * block_index_q, 0),  # why 0,0? We need to 
+        offsets=(BLOCK_SIZE_Q * block_index_q, 0),  
         block_shape=(BLOCK_SIZE_Q, HEAD_DIM),
         order=(0,1)
     )
@@ -200,7 +200,13 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
             )
 
     # The goal of logsumexp is for us to not haev to recompute the params of the softmax  during backward pass
+    # remember we need to divide by l_i 
+    O_block = O_block / l_i[:, None]
+    # then we need to access the pointer to m to specific qoffset q and seq len
+    m_ptrs = M + index_batch_head * SEQ_LEN + offsets_q
     
+
+    # store everyhting 
   
 
     
