@@ -159,7 +159,7 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
             compute all and skip the second function (no casual is 1)
     '''
 
-    
+
 
     if STAGE == 3 or STAGE == 1:
         # in this step we're doing the causal attention or even non causal for the blocks that are on the left (we still have to do it in both cases, in one case it will be enough and the rest should be -inf (in the causal) and in the non causal we will still have to compute evrything)
@@ -199,7 +199,7 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
                 SEQ_LEN
             )
 
-    
+    # The goal of logsumexp is for us to not haev to recompute the params of the softmax  during backward pass
     
   
 
