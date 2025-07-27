@@ -201,6 +201,7 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
 
     # The goal of logsumexp is for us to not haev to recompute the params of the softmax  during backward pass
     # remember we need to divide by l_i 
+    m_i += tl.math.log(l_i) # why?
     O_block = O_block / l_i[:, None]
     # then we need to access the pointer to m to specific qoffset q and seq len
     m_ptrs = M + index_batch_head * SEQ_LEN + offsets_q
@@ -273,14 +274,22 @@ class TritonAttention(torch.autograd.Function):
             STAGE=stage
         )
 
-        ctx.save_for_backward(Q, K, V, O, M)
+        ctx.save_for_backward(Q, K, V, O, M) # we dont want to save product s of thosee (ex: QK^T), ecause tl.store in the hbm would be veery eexpensivee, more optimal to compute on thee fly
         ctx.grid = grid
         ctx.softmax_scale = softmax_scale
         ctx.HEAD_DIM = HEAD_DIM
         ctx.causal = causal
 
 
+    # chain rule is bascially product of gradients before 
+    @staticmethod
 
+    def backward(ctx, d0):
+        Q, K, V, O, M = ctx.saved_tensors
+        # makee d0 assert contigous, asserte strides
+        # init dQ, DK, dV
+        
+    # 
 
 
 def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float16):
