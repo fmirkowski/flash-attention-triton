@@ -221,8 +221,9 @@ def _attn_bwd_preprocess(O, dO, D, BLOCK_SIZE_Q: tl.constexpr, HEAD_DIM: tl.cons
 
 
 @triton.jit
-def _attn_bwd_dk_dv(Q,
-    K,
+def _attn_bwd_dk_dv(
+    Q,
+    K, # SHAPE: [batch_index, heads_index, block_index:block_index+BLOCK_KV (mem address), 0:HEAD_DIM (we want all, and we specify that in the arrange)]
     V,
     softmax_scale,
     dO,
@@ -242,6 +243,26 @@ def _attn_bwd_dk_dv(Q,
     HEAD_DIM: tl.constexpr,
     STAGE: tl.constexpr,): # commas at the end are a good practise
     
+    # use comments for visualising shapes of what we actually process
+    block_index_kv = tl.program_id(0)
+    batch_head_index = tl.program_id(1)
+    
+    batch_index = batch_head_index // NUM_HEADS
+    head_index = batch_head_index % NUM_HEADS
+
+    batch_head_seq_offset = (batch_head_index * SEQ_LEN).to(tl.int64)
+    M += batch_head_seq_offset # those are currently pointers
+    D += batch_head_seq_offset
+    # create a kv block
+    K += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    V += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    # [:, None] is the same thing as unsqueeze
+    kv_start_block =  block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV)[:, None] * stride_seq # START ARANGE FROM 0 
+    K_block = tl.load(K+kv_start_block + tl.arange(0, HEAD_DIM)[None, :] * stride_head)
+    V_block = tl.load(V+kv_start_block + tl.arange(0, HEAD_DIM)[None, :] * stride_head)
+
+    
+
 
 
 
