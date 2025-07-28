@@ -266,14 +266,14 @@ def _attn_bwd_dk_dv(
 
     # we need to add the arange because block_index_kv * BLOCK_KV (specific row, where it starts) + tl.arange(0, BLOCK_KV)[:, None] – specyfing all rows that we will need to cover * stride_seq – specific memory addresses of those rows
     kv_start_block =  block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV)[:, None] * stride_seq # START ARANGE FROM 0 
-    K_block = tl.load(K+kv_start_block + tl.arange(0, HEAD_DIM)[None, :] * stride_head) # creates a 2D set of addresses of the block with the addtition!
-    V_block = tl.load(V+kv_start_block + tl.arange(0, HEAD_DIM)[None, :] * stride_head)
+    K_block = tl.load(K+kv_start_block + offsets_dim[None, :] * stride_head) # creates a 2D set of addresses of the block with the addtition!
+    V_block = tl.load(V+kv_start_block + offsets_dim[None, :] * stride_head)
     dK_block = tl.empty_like(K_block)
     dV_block = tl.empty_like(V_block)
     offsets_q = tl.arange(0, BLOCK_Q)
     # Do the same for qT and dO ptrs (for backward thorugh matmul), load it transposed because its more efficient
-    qT_ptrs = Q+offsets_q[None, :] * stride_seq + tl.arange(0, HEAD_DIM)[:, None] * stride_dim 
-    dO_ptrs = dO+offsets_q[:, None] * stride_seq + tl.arange(0, HEAD_DIM)[None, :] * stride_dim 
+    qT_ptrs = Q+offsets_q[None, :] * stride_seq + offsets_dim[:, None] * stride_dim 
+    dO_ptrs = dO+offsets_q[:, None] * stride_seq + offsets_dim[None, :] * stride_dim 
     current_q = 0 # later in the loop just update it
 
     num_steps = SEQ_LEN // BLOCK_Q
@@ -291,18 +291,23 @@ def _attn_bwd_dk_dv(
             mask = (offsets_q[:, None] >= (block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV))[None, :])
             pT = tl.where(mask, pT, 0.0)
             
-        
         dO_block = tl.load(dO_ptrs)
         # formula for d_Vblock form paper
-        dV_block += tl.dot(pT, dO) 
+        dV_block += tl.dot(pT.to(tl.float16), dO) 
         D_block = tl.load(D+offsets_q)
+        dpT = tl.dot(V_block, tl.trans(dO_block)).to(float32)
+        dS_T = pT * (dpT - D_block).to(tl.float16)
+        dK_block += softmax_scale * tl.dot(dS_T, tl.trans(qT_block))
         
         
-        
-        #advance (+= BLOCK_Q), why did we do tl.advance later?
+        qT_ptrs += BLOCK_Q
+        dO_ptrs += BLOCK_Q
+        current_q += BLOCK_Q
+        #why did we do tl.advance later?
 
     # store dV and dK, write those back to HBM
-    
+    dK_block_ptr = dK + kv_start_block[:, None] + offsets_dim[None, :] * stride_dim
+    tl.store()
     
 
 
