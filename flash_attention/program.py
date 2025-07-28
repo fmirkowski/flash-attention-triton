@@ -257,10 +257,15 @@ def _attn_bwd_dk_dv(
     K += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
     V += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
     # [:, None] is the same thing as unsqueeze
+
+    # we need to add the arange because block_index_kv * BLOCK_KV (specific row, where it starts) + tl.arange(0, BLOCK_KV)[:, None] – specyfing all rows that we will need to cover * stride_seq – specific memory addresses of those rows
     kv_start_block =  block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV)[:, None] * stride_seq # START ARANGE FROM 0 
-    K_block = tl.load(K+kv_start_block + tl.arange(0, HEAD_DIM)[None, :] * stride_head)
+    K_block = tl.load(K+kv_start_block + tl.arange(0, HEAD_DIM)[None, :] * stride_head) # creates a 2D set of addresses of the block with the addtition!
     V_block = tl.load(V+kv_start_block + tl.arange(0, HEAD_DIM)[None, :] * stride_head)
 
+    # Do the same for qT and dO ptrs 
+
+    
     
 
 
