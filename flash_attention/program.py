@@ -355,7 +355,32 @@ def _attn_bwd_dq(Q,
     
 
 
-    pass
+    # use comments for visualising shapes of what we actually process
+    block_index_kv = tl.program_id(0)
+    batch_head_index = tl.program_id(1)
+    
+    batch_index = batch_head_index // NUM_HEADS
+    head_index = batch_head_index % NUM_HEADS
+
+    batch_head_seq_offset = (batch_head_index * SEQ_LEN).to(tl.int64)
+    M += batch_head_seq_offset # those are currently pointers
+    D += batch_head_seq_offset
+    # create a kv block
+    K += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    V += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    Q += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    dO += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    M += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    dQ += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    dV += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    dK += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+
+    # load Q block with head idm too, aprticular q block
+    # init dQ
+    #load dO
+    # load M
+    # access k and v pointers as transposed blovk, load them in the loop adn then advance them like before
+    # adn thenproceed to compute q
 class TritonAttention(torch.autograd.Function):
 
     @staticmethod
@@ -457,7 +482,7 @@ class TritonAttention(torch.autograd.Function):
         _attn_bwd_preprocess[preprocess_grid](O=O, dO=dO, D=D, BLOCK_SIZE_Q=BLOCK_SIZE_MACRO, HEAD_DIM=ctx.HEAD_DIM)
         
         dk_dv_grid = (
-            tl.cdiv(SEQ_LEN, BLOCK_SIZE_MICRO),
+            tl.cdiv(SEQ_LEN, BLOCK_SIZE_MICRO), # why micro tho?
             NUM_HEADS*BATCH_SIZE,
             1
         )
@@ -465,6 +490,29 @@ class TritonAttention(torch.autograd.Function):
         stage = 3 if ctx.causal else 1
         
         _attn_bwd_dk_dv[dk_dv_grid](
+            Q=Q,
+            K=K,
+            V=V,
+            softmax_scale=ctx.softmax_scale,
+            dO=dO,
+            dQ=dQ,
+            dK=dK,
+            dV=dV,
+            M=M,
+            D=D,
+            stride_batch=K.stride(0),
+            stride_head=K.stride(1),
+            stride_seq=K.stride(2),
+            stride_dim=K.stride(3),
+            NUM_HEADS=NUM_HEADS,
+            SEQ_LEN=SEQ_LEN,
+            BLOCK_Q=BLOCK_SIZE_MACRO,
+            BLOCK_KV=BLOCK_SIZE_MICRO,
+            HEAD_DIM=ctx.HEAD_DIM,
+            STAGE=stage,)
+        
+
+        _attn_bwd_dq[dk_dv_grid](
             Q=Q,
             K=K,
             V=V,
