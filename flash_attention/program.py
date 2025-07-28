@@ -228,8 +228,8 @@ def _attn_bwd_preprocess(O, dO, D, BLOCK_SIZE_Q: tl.constexpr, HEAD_DIM: tl.cons
     O_block = tl.load(O).to(tl.float32)
     dO_block = tl.load(dO).to(tl.float32)
     
-    D_block = tl.sum(dO_block * O_block)
-    D_block_ptr = D + block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None] * O.stride(3) # we dont need head dim stuff because its a scalr
+    D_block = tl.sum(dO_block * O_block, axis=1)
+    D_block_ptr = D + block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q) * O.stride(3) # we dont need head dim stuff because its a scalr
     tl.store(D_block_ptr, D_block)
 # Pre process keernel , load programs, load manually the blocks O, dO, gt to th right points to whatg w want to operate with 
 # Why do we need to do it tho?
