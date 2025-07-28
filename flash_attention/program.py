@@ -211,7 +211,39 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
     # store everyhting 
   
 
-    
+@triton.jit
+def _attn_bwd_preprocess(O, dO, D, BLOCK_SIZE_Q: tl.constexpr, HEAD_DIM: tl.constexpr):
+    # get the block of q indices, load O_block by composing it manually, read dO block and just add those into D_block, store D_block
+    # get the offset_batch_head and evertything we neeed from program_id
+    pass
+# Pre process keernel , load programs, load manually the blocks O, dO, gt to th right points to whatg w want to operate with 
+# Why do we need to do it tho?
+
+
+@triton.jit
+def _attn_bwd_dk_dv(Q,
+    K,
+    V,
+    softmax_scale,
+    dO,
+    dQ,
+    dK,
+    dV,
+    M,
+    D,
+    stride_batch,
+    stride_head,
+    stride_seq,
+    stride_dim,
+    NUM_HEADS,
+    SEQ_LEN,
+    BLOCK_Q: tl.constexpr,
+    BLOCK_KV: tl.constexpr,
+    HEAD_DIM: tl.constexpr,
+    STAGE: tl.constexpr,): # commas at the end are a good practise
+
+    # 
+    pass
 class TritonAttention(torch.autograd.Function):
 
     @staticmethod
@@ -283,12 +315,25 @@ class TritonAttention(torch.autograd.Function):
 
     # chain rule is bascially product of gradients before 
     @staticmethod
-
     def backward(ctx, d0):
         Q, K, V, O, M = ctx.saved_tensors
         # makee d0 assert contigous, asserte strides
+        assert d0.is_contigous() == True
+        assert Q.stride == K.stride; K.stride == V.stride; O.stride == K.stride
         # init dQ, DK, dV
+        dQ = torch.empty_like(Q)
+        dV = torch.empty_like(V)
+        dK = torch.empty_like(K)
+
+
+        #init stages? batch_szie num_heads, seq_len, block sizes
+        # Pre procss kernel, goal 
         
+        grid = lambda arg
+
+        _attn_bwd_preporcess[grid]
+        _attn_bwd_dk_dv
+        #other grid, stage – create offsets move them, ot the rigtht starting points etc
     # 
 
 
