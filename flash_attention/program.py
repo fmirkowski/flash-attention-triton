@@ -256,6 +256,12 @@ def _attn_bwd_dk_dv(
     # create a kv block
     K += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
     V += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    Q += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    dO += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    M += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    dQ += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    dV += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
+    dK += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
     # [:, None] is the same thing as unsqueeze
 
     # we need to add the arange because block_index_kv * BLOCK_KV (specific row, where it starts) + tl.arange(0, BLOCK_KV)[:, None] – specyfing all rows that we will need to cover * stride_seq – specific memory addresses of those rows
@@ -263,8 +269,32 @@ def _attn_bwd_dk_dv(
     K_block = tl.load(K+kv_start_block + tl.arange(0, HEAD_DIM)[None, :] * stride_head) # creates a 2D set of addresses of the block with the addtition!
     V_block = tl.load(V+kv_start_block + tl.arange(0, HEAD_DIM)[None, :] * stride_head)
 
-    # Do the same for qT and dO ptrs 
+    offsets_q = tl.arange(0, BLOCK_Q)
+    # Do the same for qT and dO ptrs (for backward thorugh matmul), load it transposed because its more efficient
+    qT_ptrs = Q+offsets_q[None, :] * stride_seq + tl.arange(0, HEAD_DIM)[:, None] * stride_dim 
+    dO_ptrs = dO+offsets_q[:, None] * stride_seq + tl.arange(0, HEAD_DIM)[None, :] * stride_dim 
+    current_q = 0 # later in the loop just update it
 
+    num_steps = SEQ_LEN // BLOCK_Q
+
+    for step in range(num_steps):
+        qT_block = tl.load(qT_ptrs) # we will be advancing it later! like in forward pass
+        M_block = tl.load(M + current_q + tl.arange(0, BLOCK_Q))
+        sT = softmax_scale * tl.dot(K_block, qT_block)
+        pT = tl.exp(sT - M_block[None, :]) # because element wise
+
+        if STAGE == 3:
+            # mask where with zeros
+            pass
+        
+        dO_block = tl.load(dO_ptrs)
+        # formula for d_Vblock form paper
+
+
+        # Load Di
+        # compute dK and previous stuff from the paper
+
+        #advance (+= LOCKs)
     
     
 
