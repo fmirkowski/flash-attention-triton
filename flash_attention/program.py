@@ -241,8 +241,34 @@ def _attn_bwd_dk_dv(Q,
     BLOCK_KV: tl.constexpr,
     HEAD_DIM: tl.constexpr,
     STAGE: tl.constexpr,): # commas at the end are a good practise
+    pass
 
-    # go thoprugh the loop
+
+@triton.jit
+def _attn_bwd_dq(Q,
+    K,
+    V,
+    softmax_scale,
+    dO,
+    dQ,
+    dK,
+    dV,
+    M,
+    D,
+    stride_batch,
+    stride_head,
+    stride_seq,
+    stride_dim,
+    NUM_HEADS,
+    SEQ_LEN,
+    BLOCK_Q: tl.constexpr,
+    BLOCK_KV: tl.constexpr,
+    HEAD_DIM: tl.constexpr,
+    STAGE: tl.constexpr,): 
+    
+    # after loading and moving stuff, compute qk, compute softmax with M by just substracting qk - m and exponmentianing, move ppointers and f
+
+
     pass
 class TritonAttention(torch.autograd.Function):
 
@@ -262,7 +288,7 @@ class TritonAttention(torch.autograd.Function):
         grid = lambda args: (
             triton.cdiv(SEQ_LEN, args['BLOCK_SIZE_Q']), #numbe of blocks in Q – which block are we going to work with
             BATCH_SIZE * NUM_HEADS,
-            1 # Z dim in CUDA, we dont want to use it for now
+            1,  # Z dim in CUDA, we dont want to use it for now
         )
         
         # | so the number of parallel progframs is BATCH_SIZE * NUM_HEADS * NUM_BLOCKS_Q
@@ -315,17 +341,17 @@ class TritonAttention(torch.autograd.Function):
 
     # chain rule is bascially product of gradients before 
     @staticmethod
-    def backward(ctx, d0):
+    def backward(ctx, dO):
         Q, K, V, O, M = ctx.saved_tensors
-        # makee d0 assert contigous, asserte strides
-        assert d0.is_contigous() == True
-        assert Q.stride == K.stride; K.stride == V.stride; O.stride == K.stride
+        # makee dO assert contigous, asserte strides
+        assert dO.is_contigous()
+        assert Q.stride == K.stride == V.stride == O.stride == dO.stride
         # init dQ, DK, dV
         dQ = torch.empty_like(Q)
         dV = torch.empty_like(V)
         dK = torch.empty_like(K)
 
-
+        BATCH_SIZE, NUM_HEADS, SEQ_LEN
         #init stages? batch_szie num_heads, seq_len, block sizes
         # Pre procss kernel, goal 
         
@@ -350,7 +376,7 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     
 
     softmax_scale = 1 / (HEAD_DIM**0.5)
-    d0 = torch.randn_like(Q)
+    dO = torch.randn_like(Q)
 
     # torch implementation
 
@@ -360,7 +386,7 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
         P[:, :, MASK == 0] = float('-inf')
     P = torch.softmax(P, dim=-1).half()
     ref_O = torch.matmul(P, V)
-    ref_O.backward(d0)
+    ref_O.backward(dO)
     
     ref_dV, V.grad = V.grad.clone(), None
     ref_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to refference
@@ -371,7 +397,7 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     # triton implementation
 
     tri_out = TritonAttention.apply(Q, K, V, causal, softmax_scale).half()
-    tri_out.backward(d0)
+    tri_out.backward(dO)
     tri_dV, V.grad = V.grad.clone(), None
     tri_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to triference
     tri_dQ, Q.grad = Q.grad.clone(), None
