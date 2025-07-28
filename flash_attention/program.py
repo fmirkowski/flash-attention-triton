@@ -242,7 +242,7 @@ def _attn_bwd_dk_dv(Q,
     HEAD_DIM: tl.constexpr,
     STAGE: tl.constexpr,): # commas at the end are a good practise
 
-    # 
+    # go thoprugh the loop
     pass
 class TritonAttention(torch.autograd.Function):
 
