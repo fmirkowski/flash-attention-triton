@@ -265,6 +265,7 @@ def _attn_bwd_dk_dv(
     # [:, None] is the same thing as unsqueeze
 
     # we need to add the arange because block_index_kv * BLOCK_KV (specific row, where it starts) + tl.arange(0, BLOCK_KV)[:, None] – specyfing all rows that we will need to cover * stride_seq – specific memory addresses of those rows
+    offsets_dim = tl.arange(0, HEAD_DIM)
     kv_start_block =  block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV)[:, None] * stride_seq # START ARANGE FROM 0 
     K_block = tl.load(K+kv_start_block + offsets_dim[None, :] * stride_head) # creates a 2D set of addresses of the block with the addtition!
     V_block = tl.load(V+kv_start_block + offsets_dim[None, :] * stride_head)
@@ -295,7 +296,7 @@ def _attn_bwd_dk_dv(
         # formula for d_Vblock form paper
         dV_block += tl.dot(pT.to(tl.float16), dO) 
         D_block = tl.load(D+offsets_q)
-        dpT = tl.dot(V_block, tl.trans(dO_block)).to(float32)
+        dpT = tl.dot(V_block, tl.trans(dO_block)).to(tl.float32)
         dS_T = pT * (dpT - D_block).to(tl.float16)
         dK_block += softmax_scale * tl.dot(dS_T, tl.trans(qT_block))
         
@@ -307,7 +308,9 @@ def _attn_bwd_dk_dv(
 
     # store dV and dK, write those back to HBM
     dK_block_ptr = dK + kv_start_block[:, None] + offsets_dim[None, :] * stride_dim
-    tl.store()
+    tl.store(dK_block_ptr, dK_block)
+    dV_block_ptr = dV + kv_start_block[:, None] + offsets_dim[None, :] * stride_dim
+    tl.store(dV_block_ptr, dV_block)
     
 
 
