@@ -241,7 +241,8 @@ def _attn_bwd_dk_dv(Q,
     BLOCK_KV: tl.constexpr,
     HEAD_DIM: tl.constexpr,
     STAGE: tl.constexpr,): # commas at the end are a good practise
-    pass
+    
+
 
 
 @triton.jit
@@ -353,18 +354,54 @@ class TritonAttention(torch.autograd.Function):
 
         BATCH_SIZE, NUM_HEADS, SEQ_LEN = Q.shape[:3]
         NUM_WARPS, NUM_STAGES = 4, 3
-        BLOCK_SIZE_MICRO, BLOCK_SIZE_MACRO = 32, 128
+        BLOCK_SIZE_MICRO, BLOCK_SIZE_MACRO = 32, 128 # M/4d in the paper, because M is the total capacity for scalars in SRAM and 4d becausue we split to 4 blocks lol
+
+
 
 
         
         # Pre procss kernel, goal 
         
-        grid = lambda arg
+        preprocess_grid = lambda arg: (
+            tl.cdiv(SEQ_LEN, BLOCK_SIZE_MACRO),
+            BATCH_SIZE * NUM_HEADS,
+            1
+        )
+        D = torch.empty(M)
+        # finish preprocess later when you know what its needed for ;)
+        _attn_bwd_preprocess[preprocess_grid](O=O, dO=dO, D=D, BLOCK_SIZE_Q=BLOCK_SIZE_MACRO, HEAD_DIM=ctx.HEAD_DIM)
+        
+        dk_dv_grid = (
+            tl.cdiv(SEQ_LEN, BLOCK_SIZE_MICRO),
+            NUM_HEADS*BATCH_SIZE,
+            1
+        )
 
-        _attn_bwd_preporcess[grid]
-        _attn_bwd_dk_dv
-        #other grid, stage – create offsets move them, ot the rigtht starting points etc
-    # 
+        stage = 3 if ctx.causal else 1
+        
+        _attn_bwd_dk_dv[dk_dv_grid](
+            Q=Q,
+            K=K,
+            V=V,
+            softmax_scale=ctx.softmax_scale,
+            dO=dO,
+            dQ=dQ,
+            dK=dK,
+            dV=dV,
+            M=M,
+            D=D,
+            stride_batch=K.stride(0),
+            stride_head=K.stride(1),
+            stride_seq=K.stride(2),
+            stride_dim=K.stride(3),
+            NUM_HEADS=NUM_HEADS,
+            SEQ_LEN=SEQ_LEN,
+            BLOCK_Q=BLOCK_SIZE_MACRO,
+            BLOCK_KV=BLOCK_SIZE_MICRO,
+            HEAD_DIM=ctx.HEAD_DIM,
+            STAGE=stage,)
+        
+     
 
 
 def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float16):
