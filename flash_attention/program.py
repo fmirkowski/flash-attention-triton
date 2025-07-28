@@ -215,7 +215,22 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
 def _attn_bwd_preprocess(O, dO, D, BLOCK_SIZE_Q: tl.constexpr, HEAD_DIM: tl.constexpr):
     # get the block of q indices, load O_block by composing it manually, read dO block and just add those into D_block, store D_block
     # get the offset_batch_head and evertything we neeed from program_id
-    pass
+    block_index = tl.program_id(0)
+    batch_head_index = tl.program_id(1)
+    O += batch_head_index * O.stride(2)
+    # D += batch_head_index * O.stride(2)
+    dO += batch_head_index * O.stride(2)
+    dO += block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None] * O.stride(3) + tl.arange(0, HEAD_DIM)[None, :]
+    # D += block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None] * O.stride(3) + tl.arange(0, HEAD_DIM)[None, :]
+    O += block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None] * O.stride(3) + tl.arange(0, HEAD_DIM)[None, :]
+
+    # D_block = tl.load(D).to(tl.float32) No need to load D we dont need its contents, its just a mem pinter for us
+    O_block = tl.load(O).to(tl.float32)
+    dO_block = tl.load(dO).to(tl.float32)
+    
+    D_block = tl.sum(dO_block * O_block)
+    D_block_ptr = D + block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None] * O.stride(3) # we dont need head dim stuff because its a scalr
+    tl.store(D_block_ptr, D_block)
 # Pre process keernel , load programs, load manually the blocks O, dO, gt to th right points to whatg w want to operate with 
 # Why do we need to do it tho?
 
