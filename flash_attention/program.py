@@ -37,7 +37,7 @@ def _attn_fwd_inner(O_block,
         QK_block = tl.dot(Q_block, K_block)
         # differ?
         if STAGE == 2:
-            mask = offsets_q[:, None] >= (start_kv + offsets_kv[None, :]) # because we're iterating on many blocks
+            mask = offsets_q[:, None] >= (start_kv + offsets_kv)[None, :] # because we're iterating on many blocks
             QK_block = QK_block * softmax_scale + tl.where(mask, 0, -1.0e6) # we need a float and tl.where creates a this, 1, BLOCK_SIZE vector
             m_ij = tl.maximum(m_i, tl.max(QK_block, axis=1))
         else: 
@@ -268,7 +268,8 @@ def _attn_bwd_dk_dv(
     kv_start_block =  block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV)[:, None] * stride_seq # START ARANGE FROM 0 
     K_block = tl.load(K+kv_start_block + tl.arange(0, HEAD_DIM)[None, :] * stride_head) # creates a 2D set of addresses of the block with the addtition!
     V_block = tl.load(V+kv_start_block + tl.arange(0, HEAD_DIM)[None, :] * stride_head)
-
+    dK_block = tl.empty_like(K_block)
+    dV_block = tl.empty_like(V_block)
     offsets_q = tl.arange(0, BLOCK_Q)
     # Do the same for qT and dO ptrs (for backward thorugh matmul), load it transposed because its more efficient
     qT_ptrs = Q+offsets_q[None, :] * stride_seq + tl.arange(0, HEAD_DIM)[:, None] * stride_dim 
@@ -279,22 +280,28 @@ def _attn_bwd_dk_dv(
 
     for step in range(num_steps):
         qT_block = tl.load(qT_ptrs) # we will be advancing it later! like in forward pass
-        M_block = tl.load(M + current_q + tl.arange(0, BLOCK_Q))
+        dO_block = tl.load(dO_ptrs)
+        offsets_q = current_q + tl.arange(0, BLOCK_Q)
+        M_block = tl.load(M + offsets_q)
         sT = softmax_scale * tl.dot(K_block, qT_block)
-        pT = tl.exp(sT - M_block[None, :]) # because element wise
+        pT = tl.maht.exp(sT - M_block[None, :]) # because element wise
 
         if STAGE == 3:
             # mask where with zeros
-            pass
+            mask = (offsets_q[:, None] >= (block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV))[None, :])
+            pT = tl.where(mask, pT, 0.0)
+            
         
         dO_block = tl.load(dO_ptrs)
         # formula for d_Vblock form paper
+        dV_block += tl.dot(pT, dO) 
+        D_block = tl.load(D+offsets_q)
+        
+        
+        
+        #advance (+= BLOCK_Q), why did we do tl.advance later?
 
-
-        # Load Di
-        # compute dK and previous stuff from the paper
-
-        #advance (+= LOCKs)
+    # store dV and dK, write those back to HBM
     
     
 
@@ -323,7 +330,6 @@ def _attn_bwd_dq(Q,
     HEAD_DIM: tl.constexpr,
     STAGE: tl.constexpr,): 
     
-    # after loading and moving stuff, compute qk, compute softmax with M by just substracting qk - m and exponmentianing, move ppointers and f
 
 
     pass
