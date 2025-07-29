@@ -72,8 +72,8 @@ def _attn_fwd_inner(O_block,
                 num_stages=num_stages,
                 num_warps=num_warps,
             )
-            for BLOCK_SIZE_KV in [32, 64]
-            for BLOCK_SIZE_Q in [64, 128]
+            for BLOCK_SIZE_KV in [2, 4]
+            for BLOCK_SIZE_Q in [4, 8]
             for num_stages in [3, 4, 7]
             for num_warps in [2, 4]
         ],
