@@ -356,7 +356,7 @@ def _attn_bwd_dq(Q,
 
 
     # use comments for visualising shapes of what we actually process
-    block_index_kv = tl.program_id(0)
+    block_index_q = tl.program_id(0)
     batch_head_index = tl.program_id(1)
     
     batch_index = batch_head_index // NUM_HEADS
@@ -376,11 +376,32 @@ def _attn_bwd_dq(Q,
     dK += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
 
     # load Q block with head idm too, aprticular q block
-    # init dQ
-    #load dO
-    # load M
+
+    Q_block = tl.load((Q +
+                      block_index_q * BLOCK_Q + 
+                      tl.arange(0, BLOCK_Q)[:, None] * stride_seq + 
+                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64))
+    dQ_block = tl.load((dQ +
+                      block_index_q * BLOCK_Q + 
+                      tl.arange(0, BLOCK_Q)[:, None] * stride_seq + 
+                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64)) 
+    
+    dO_block = tl.load((dO +
+                      block_index_q * BLOCK_Q + 
+                      tl.arange(0, BLOCK_Q)[:, None] * stride_seq + 
+                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64)) 
+    
+    M_block = tl.load((M +
+                      block_index_q * BLOCK_Q + 
+                      tl.arange(0, BLOCK_Q) * stride_seq).to(tl.int64)) 
+    
+
     # access k and v pointers as transposed blovk, load them in the loop adn then advance them like before
     # adn thenproceed to compute q
+
+    num_steps = NUM_HEADS // BLOCK_Q
+    for step in range(num_steps):
+        
 class TritonAttention(torch.autograd.Function):
 
     @staticmethod
