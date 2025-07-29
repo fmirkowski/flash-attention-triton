@@ -226,6 +226,7 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
     tl.store(O_block_ptr, O_block.to(O.type.element_ty))
 
     # store everyhting 
+
   
 
 @triton.jit
@@ -513,6 +514,7 @@ class TritonAttention(torch.autograd.Function):
         ctx.softmax_scale = softmax_scale
         ctx.HEAD_DIM = HEAD_DIM
         ctx.causal = causal
+        return 0
 
 
     # chain rule is bascially product of gradients before 
@@ -598,6 +600,9 @@ class TritonAttention(torch.autograd.Function):
             BLOCK_KV=BLOCK_SIZE_MICRO,
             HEAD_DIM=ctx.HEAD_DIM,
             STAGE=stage,)
+        
+        return dQ, dK, dV, None, None # we are returning none none because torch autograd expects the same shape as input (save_for_backward)
+    
         
      
 
