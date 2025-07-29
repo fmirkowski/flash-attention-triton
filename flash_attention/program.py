@@ -657,3 +657,6 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     assert torch.allclose(ref_dQ, tri_dQ, atol, rtol)
     assert torch.allclose(ref_dV, tri_dV, atol, rtol)
 
+if __name__ == "__main__": # this specifies that this will run only when the program is called directly, NOT when imported as a module, smart! and useufl
+    test_op(BATCH_SIZE=2, NUM_HEADS=4, SEQ_LEN=256, HEAD_DIM=8, causal=False)
+    print("PASSED")
