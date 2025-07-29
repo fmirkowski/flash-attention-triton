@@ -480,25 +480,25 @@ class TritonAttention(torch.autograd.Function):
             M=M,
             softmax_scale=softmax_scale,
             causal=causal,
-            stride_Q_batch=Q.stride[0], #Because we only need a pointer in triton so we have to figure out, thats why were passing the stride
-            stride_Q_heads=Q.stride[1],
-            stride_Q_seq=Q.stride[2],
-            stride_Q_dim=Q.stride[3],
+            stride_Q_batch=Q.stride()[0], #Because we only need a pointer in triton so we have to figure out, thats why were passing the stride
+            stride_Q_heads=Q.stride()[1],
+            stride_Q_seq=Q.stride()[2],
+            stride_Q_dim=Q.stride()[3],
 
-            stride_K_batch=K.stride[0],
-            stride_K_heads=K.stride[1],
-            stride_K_seq=K.stride[2],
-            stride_K_dim=K.stride[3],
+            stride_K_batch=K.stride()[0],
+            stride_K_heads=K.stride()[1],
+            stride_K_seq=K.stride()[2],
+            stride_K_dim=K.stride()[3],
 
-            stride_V_batch=V.stride[0],
-            stride_V_heads=V.stride[1],
-            stride_V_seq=V.stride[2],
-            stride_V_dim=V.stride[3],
+            stride_V_batch=V.stride()[0],
+            stride_V_heads=V.stride()[1],
+            stride_V_seq=V.stride()[2],
+            stride_V_dim=V.stride()[3],
 
-            stride_O_batch=O.stride[0],
-            stride_O_heads=O.stride[1],
-            stride_O_seq=O.stride[2],
-            stride_O_dim=O.stride[3],
+            stride_O_batch=O.stride()[0],
+            stride_O_heads=O.stride()[1],
+            stride_O_seq=O.stride()[2],
+            stride_O_dim=O.stride()[3],
 
             # Same dimeniosns actually
 
