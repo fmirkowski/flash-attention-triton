@@ -548,7 +548,7 @@ class TritonAttention(torch.autograd.Function):
         # finish preprocess later when you know what its needed for ;)
         _attn_bwd_preprocess[preprocess_grid](O=O, dO=dO, D=D, BLOCK_SIZE_Q=BLOCK_SIZE_MACRO, HEAD_DIM=ctx.HEAD_DIM)
         
-        dk_dv_grid = (
+        dk_dv_gr = (
             tl.cdiv(SEQ_LEN, BLOCK_SIZE_MICRO), # why micro tho?
             NUM_HEADS*BATCH_SIZE,
             1
@@ -623,8 +623,8 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     dO = torch.randn_like(Q)
 
     # torch implementation
-
-    MASK = torch.tril(torch.ones(SEQ_LEN, SEQ_LEN), device='cuda')
+    device = 'cuda' if torch.cuda.is_available else 'cpu'
+    MASK = torch.tril(torch.ones(SEQ_LEN, SEQ_LEN)).to(device)
     P = torch.matmul(Q, K.transpose(2,3)) * softmax_scale
     if causal:
         P[:, :, MASK == 0] = float('-inf')
