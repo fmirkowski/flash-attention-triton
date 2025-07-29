@@ -389,13 +389,33 @@ def _attn_bwd_dq(Q,
                       block_index_q * BLOCK_Q + 
                       tl.arange(0, BLOCK_Q) * stride_seq).to(tl.int64)) 
     
+    # init D_block
+    D_block = tl.load(D + block_index_q * BLOCK_Q + 
+                    tl.arange(0, BLOCK_Q)[:, None] * stride_seq + 
+                    tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64)
+
+    
     dQ_block = tl.zeros_like(Q_block, dtype=tl.float32)
-    # access k and v pointers as transposed blovk
+    offset_kv = tl.arange(0, BLOCK_KV)
+    # access k and v pointers as transposed blovk, load them transposed because its then free 
+    K_T_block_ptr = K + offset_kv[None, :] * stride_seq + tl.arange(0, HEAD_DIM)[:, None] * stride_dim
+    V_T_block_ptr = V + offset_kv[None, :] * stride_seq + tl.arange(0, HEAD_DIM)[:, None] * stride_dim
+    
+   
     # Why does this loop have to go trhough KV related number of blocks?
-
     num_steps = NUM_HEADS // BLOCK_KV
+    
     for step in range(num_steps):
+        K_T = tl.load(K_T_block_ptr)
+        V_T = tl.load(V_T_block_ptr)
+        S_block = softmax_scale * tl.dot(Q_block, K_T)
 
+        Q_block += softmax_scale * tl.dot(dS_block, tl.trans(K_T))
+        
+        # mask 
+        # compute dQ as in paper dS 
+        # movepointers and then store
+        K+
 class TritonAttention(torch.autograd.Function):
 
     @staticmethod
