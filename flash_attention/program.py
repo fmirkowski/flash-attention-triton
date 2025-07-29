@@ -410,9 +410,8 @@ def _attn_bwd_dq(Q,
 
         if STAGE == 3:
             offset_kv += curr_kv
-            offs_q = 
             mask = (
-                
+                offs_q[:, None] >= offset_kv[None, :]
             )
             P_block = tl.where(mask, P_block, 0.0)
         dP_block = tl.dot(dO_block, V_T)
