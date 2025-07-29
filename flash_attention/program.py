@@ -5,20 +5,7 @@ import triton
 import triton.language as tl
 
 
-@triton.autotune(
-        [
-            triton.Config(
-                {"BLOCK_SIZE_Q": BLOCK_SIZE_Q, "BLOCK_SIZE_KV": BLOCK_SIZE_KV},
-                num_stages=num_stages,
-                num_warps=num_warps,
-            )
-            for BLOCK_SIZE_KV in [32, 64]
-            for BLOCK_SIZE_KV in [64, 128]
-            for num_stages in [3, 4, 7]
-            for num_warps in [2, 4]
-        ],
-        key=["SEQ_LEN", "HEAD_DIM"]
-)
+
 
 @triton.jit
 def _attn_fwd_inner(O_block,
@@ -78,7 +65,20 @@ def _attn_fwd_inner(O_block,
     return O_block, l_i, m_i
 
 
-
+@triton.autotune(
+        [
+            triton.Config(
+                {"BLOCK_SIZE_Q": BLOCK_SIZE_Q, "BLOCK_SIZE_KV": BLOCK_SIZE_KV},
+                num_stages=num_stages,
+                num_warps=num_warps,
+            )
+            for BLOCK_SIZE_KV in [32, 64]
+            for BLOCK_SIZE_Q in [64, 128]
+            for num_stages in [3, 4, 7]
+            for num_warps in [2, 4]
+        ],
+        key=["SEQ_LEN", "HEAD_DIM"]
+)
 @triton.jit
 def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
                 stride_Q_batch, stride_Q_heads, stride_Q_seq, stride_Q_dim,
