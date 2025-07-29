@@ -72,8 +72,8 @@ def _attn_fwd_inner(O_block,
                 num_stages=num_stages,
                 num_warps=num_warps,
             )
-            for BLOCK_SIZE_KV in [2, 4]
-            for BLOCK_SIZE_Q in [4, 8]
+            for BLOCK_SIZE_KV in [32, 64]
+            for BLOCK_SIZE_Q in [32, 64]
             for num_stages in [3, 4, 7]
             for num_warps in [2, 4]
         ],
@@ -658,5 +658,5 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     assert torch.allclose(ref_dV, tri_dV, atol, rtol)
 
 if __name__ == "__main__": # this specifies that this will run only when the program is called directly, NOT when imported as a module, smart! and useufl
-    test_op(BATCH_SIZE=2, NUM_HEADS=4, SEQ_LEN=256, HEAD_DIM=8, causal=False)
+    test_op(BATCH_SIZE=4, NUM_HEADS=8, SEQ_LEN=512, HEAD_DIM=64, causal=False)
     print("PASSED")
