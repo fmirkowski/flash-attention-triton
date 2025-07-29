@@ -101,7 +101,7 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
 
     # this allows us to get (SEQ_LEN, HEAD_DIM) block in q, k, v by selecting index by batch and head
     qkv_offset = (
-        index_batch.to(tl.int64) * stride_Q_batch,
+        index_batch.to(tl.int64) * stride_Q_batch
          + index_head.to(tl.int64) * stride_Q_heads
     )
     # pointer to the right index in the block of queries
