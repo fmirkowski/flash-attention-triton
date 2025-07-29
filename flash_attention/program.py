@@ -370,7 +370,6 @@ def _attn_bwd_dq(Q,
     V += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
     Q += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
     dO += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
-    M += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
     dQ += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
     dV += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
     dK += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
@@ -381,11 +380,6 @@ def _attn_bwd_dq(Q,
                       block_index_q * BLOCK_Q + 
                       tl.arange(0, BLOCK_Q)[:, None] * stride_seq + 
                       tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64))
-    dQ_block = tl.load((dQ +
-                      block_index_q * BLOCK_Q + 
-                      tl.arange(0, BLOCK_Q)[:, None] * stride_seq + 
-                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64)) 
-    
     dO_block = tl.load((dO +
                       block_index_q * BLOCK_Q + 
                       tl.arange(0, BLOCK_Q)[:, None] * stride_seq + 
@@ -395,13 +389,13 @@ def _attn_bwd_dq(Q,
                       block_index_q * BLOCK_Q + 
                       tl.arange(0, BLOCK_Q) * stride_seq).to(tl.int64)) 
     
+    dQ_block = tl.zeros_like(Q_block, dtype=tl.float32)
+    # access k and v pointers as transposed blovk
+    # Why does this loop have to go trhough KV related number of blocks?
 
-    # access k and v pointers as transposed blovk, load them in the loop adn then advance them like before
-    # adn thenproceed to compute q
-
-    num_steps = NUM_HEADS // BLOCK_Q
+    num_steps = NUM_HEADS // BLOCK_KV
     for step in range(num_steps):
-        
+
 class TritonAttention(torch.autograd.Function):
 
     @staticmethod
