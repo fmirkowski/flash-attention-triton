@@ -8,9 +8,16 @@ import triton.language as tl
 @triton.autotune(
         [
             triton.Config(
-                {BLOCK}
+                {"BLOCK_SIZE_Q": BLOCK_SIZE_Q, "BLOCK_SIZE_KV": BLOCK_SIZE_KV},
+                num_stages=num_stages,
+                num_warps=num_warps,
             )
-        ]
+            for BLOCK_SIZE_KV in [32, 64]
+            for BLOCK_SIZE_KV in [64, 128]
+            for num_stages in [3, 4, 7]
+            for num_warps in [2, 4]
+        ],
+        key=["SEQ_LEN", "HEAD_DIM"]
 )
 
 @triton.jit
