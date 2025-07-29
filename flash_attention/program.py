@@ -304,7 +304,7 @@ def _attn_bwd_dk_dv(
 
         if STAGE == 3:
             # mask where with zeros
-            mask = (offsets_q[:, None] >= (block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV))[None, :])
+            mask = (offsets_q[:, None] >= (block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV))[None, :]) # current?
             pT = tl.where(mask, pT, 0.0)
             
         dO_block = tl.load(dO_ptrs)
@@ -402,20 +402,33 @@ def _attn_bwd_dq(Q,
     V_T_block_ptr = V + offset_kv[None, :] * stride_seq + tl.arange(0, HEAD_DIM)[:, None] * stride_dim
     
    
-    # Why does this loop have to go trhough KV related number of blocks?
+    # Why does this loop have to go trhough KV related number of blocks? - because as in earlier kernel we are now iterating through every k and v - lets find out why tho ;)
+
     num_steps = NUM_HEADS // BLOCK_KV
     
     for step in range(num_steps):
         K_T = tl.load(K_T_block_ptr)
         V_T = tl.load(V_T_block_ptr)
         S_block = softmax_scale * tl.dot(Q_block, K_T)
+        P_block = tl.math.exp(S_block - M_block)
 
+        if STAGE == 3:
+            mask = (
+                
+            )
+            P_block = tl.where(mask, P_block, 0.0)
+        dP_block = tl.dot(dO_block, V_T)
+        dS_block = P_block * (dP_block - D_block) # why are we not advancing D?
         Q_block += softmax_scale * tl.dot(dS_block, tl.trans(K_T))
         
         # mask 
         # compute dQ as in paper dS 
         # movepointers and then store
-        K+
+        K_T_block_ptr += BLOCK_KV
+        V_T_block_ptr += BLOCK_KV
+        curr_kv += BLOCK_KV
+
+
 class TritonAttention(torch.autograd.Function):
 
     @staticmethod
