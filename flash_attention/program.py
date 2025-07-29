@@ -1,7 +1,17 @@
 import torch
+import os
+os.environ(['TRITON_PRINT_AUTOTUNING']) = '1'
 import triton
 import triton.language as tl
 
+
+@triton.autotune(
+        [
+            triton.Config(
+                {BLOCK}
+            )
+        ]
+)
 
 @triton.jit
 def _attn_fwd_inner(O_block,
