@@ -167,14 +167,14 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
     # we are calling twice for software pipelining
     # 3 for casual 1 for non casual
 
-    '''
-    NOTE:
-    So the pipeline is:
-        if attention is casual then:
-            compute the left side and after that the diagonal (in the second iteration)
-        if attention is non-casual then:
-            compute all and skip the second function (no casual is 1)
-    '''
+    
+    # NOTE:
+    # So the pipeline is:
+    #     if attention is casual then:
+    #         compute the left side and after that the diagonal (in the second iteration)
+    #     if attention is non-casual then:
+    #         compute all and skip the second function (no casual is 1)
+    
 
 
 
