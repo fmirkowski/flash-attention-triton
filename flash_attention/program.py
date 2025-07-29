@@ -375,23 +375,19 @@ def _attn_bwd_dq(Q,
     dK += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
 
     # load Q block with head idm too, aprticular q block
-
+    offs_q = block_index_q * BLOCK_Q + tl.arange(0, BLOCK_Q)
     Q_block = tl.load((Q +
-                      block_index_q * BLOCK_Q + 
-                      tl.arange(0, BLOCK_Q)[:, None] * stride_seq + 
+                      offs_q[:, None] * stride_seq + 
                       tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64))
     dO_block = tl.load((dO +
-                      block_index_q * BLOCK_Q + 
-                      tl.arange(0, BLOCK_Q)[:, None] * stride_seq + 
+                      offs_q[:, None] * stride_seq + 
                       tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64)) 
     
     M_block = tl.load((M +
-                      block_index_q * BLOCK_Q + 
-                      tl.arange(0, BLOCK_Q) * stride_seq).to(tl.int64)) 
+                      offs_q).to(tl.int64)) 
     
     # init D_block
-    D_block = tl.load(D + block_index_q * BLOCK_Q + 
-                    tl.arange(0, BLOCK_Q)[:, None] * stride_seq + 
+    D_block = tl.load(D + offs_q[:, None] * stride_seq + 
                     tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64)
 
     
@@ -405,7 +401,7 @@ def _attn_bwd_dq(Q,
     # Why does this loop have to go trhough KV related number of blocks? - because as in earlier kernel we are now iterating through every k and v - lets find out why tho ;)
 
     num_steps = NUM_HEADS // BLOCK_KV
-    
+    curr_kv = 0
     for step in range(num_steps):
         K_T = tl.load(K_T_block_ptr)
         V_T = tl.load(V_T_block_ptr)
@@ -413,13 +409,15 @@ def _attn_bwd_dq(Q,
         P_block = tl.math.exp(S_block - M_block)
 
         if STAGE == 3:
+            offset_kv += curr_kv
+            offs_q = 
             mask = (
                 
             )
             P_block = tl.where(mask, P_block, 0.0)
         dP_block = tl.dot(dO_block, V_T)
         dS_block = P_block * (dP_block - D_block) # why are we not advancing D?
-        Q_block += softmax_scale * tl.dot(dS_block, tl.trans(K_T))
+        dQ_block += softmax_scale * tl.dot(dS_block, tl.trans(K_T))
         
         # mask 
         # compute dQ as in paper dS 
@@ -428,7 +426,7 @@ def _attn_bwd_dq(Q,
         V_T_block_ptr += BLOCK_KV
         curr_kv += BLOCK_KV
 
-
+    tl.store(dQ_bloc)
 class TritonAttention(torch.autograd.Function):
 
     @staticmethod
