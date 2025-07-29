@@ -1,6 +1,6 @@
 import torch
 import os
-os.environ(['TRITON_PRINT_AUTOTUNING']) = '1'
+os.environ['TRITON_PRINT_AUTOTUNING'] = '1'
 import triton
 import triton.language as tl
 
