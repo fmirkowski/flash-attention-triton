@@ -316,8 +316,8 @@ def _attn_bwd_dk_dv(
         dK_block += softmax_scale * tl.dot(dS_T, tl.trans(qT_block))
         
         
-        qT_ptrs += BLOCK_Q
-        dO_ptrs += BLOCK_Q
+        qT_ptrs += BLOCK_Q * stride_seq
+        dO_ptrs += BLOCK_Q * stride_seq
         current_q += BLOCK_Q
         #why did we do tl.advance later?
 
@@ -414,16 +414,17 @@ def _attn_bwd_dq(Q,
                 offs_q[:, None] >= offset_kv[None, :]
             )
             P_block = tl.where(mask, P_block, 0.0)
-        dP_block = tl.dot(dO_block, V_T)
+        dP_block = tl.dot(dO_block, V_T).to(tl.float32)
         dS_block = P_block * (dP_block - D_block) # why are we not advancing D?
         dQ_block += softmax_scale * tl.dot(dS_block, tl.trans(K_T))
         
         # mask 
         # compute dQ as in paper dS 
         # movepointers and then store
-        K_T_block_ptr += BLOCK_KV
-        V_T_block_ptr += BLOCK_KV
+        K_T_block_ptr += BLOCK_KV * stride_seq
+        V_T_block_ptr += BLOCK_KV * stride_seq
         curr_kv += BLOCK_KV
+
 
     tl.store(dQ_bloc)
 class TritonAttention(torch.autograd.Function):
