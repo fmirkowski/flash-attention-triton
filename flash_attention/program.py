@@ -147,8 +147,8 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
 
     # We parrallelise each program by the query block (right now we just select the right q block)
 
-    offsets_q = BLOCK_SIZE_Q * block_index_q + tl.arrange(0, BLOCK_SIZE_Q) # loading particular queries
-    offsets_kv = tl.arrange(0, BLOCK_SIZE_KV) # loading particular queries, this is not a specific place in memory, remember – its just offset, where do we have to move (ie index) thats why it can be the same for both key and value
+    offsets_q = BLOCK_SIZE_Q * block_index_q + tl.arange(0, BLOCK_SIZE_Q) # loading particular queries
+    offsets_kv = tl.arange(0, BLOCK_SIZE_KV) # loading particular queries, this is not a specific place in memory, remember – its just offset, where do we have to move (ie index) thats why it can be the same for both key and value
     # running maximum for each query block Q_i
     m_i = tl.zeros([BLOCK_SIZE_Q], dtype=tl.float32) - float('inf')
     l_i = tl.zeros([BLOCK_SIZE_Q], dtype=tl.float32) + 1.0
@@ -256,7 +256,7 @@ def _attn_bwd_preprocess(O, dO, D, BLOCK_SIZE_Q: tl.constexpr, HEAD_DIM: tl.cons
 @triton.jit
 def _attn_bwd_dk_dv(
     Q,
-    K, # SHAPE: [batch_index, heads_index, block_index:block_index+BLOCK_KV (mem address), 0:HEAD_DIM (we want all, and we specify that in the arrange)]
+    K, # SHAPE: [batch_index, heads_index, block_index:block_index+BLOCK_KV (mem address), 0:HEAD_DIM (we want all, and we specify that in the arange)]
     V,
     softmax_scale,
     dO,
