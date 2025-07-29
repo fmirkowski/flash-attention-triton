@@ -480,7 +480,7 @@ class TritonAttention(torch.autograd.Function):
             M=M,
             softmax_scale=softmax_scale,
             causal=causal,
-            stride_Q_batch=Q.stride[0], #Because we only need a pointer in triton so we have to figure out, thats why we're passing the stride
+            stride_Q_batch=Q.stride[0], #Because we only need a pointer in triton so we have to figure out, thats why were passing the stride
             stride_Q_heads=Q.stride[1],
             stride_Q_seq=Q.stride[2],
             stride_Q_dim=Q.stride[3],
