@@ -75,7 +75,7 @@ def _attn_fwd_inner(O_block,
             for BLOCK_SIZE_KV in [32]
             for BLOCK_SIZE_Q in [32]
             for num_stages in [3]
-            for num_warps in [2, 4]
+            for num_warps in [2]
         ],
         key=["SEQ_LEN", "HEAD_DIM"]
 )
