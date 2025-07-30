@@ -317,7 +317,7 @@ def _attn_bwd_dk_dv(
         offsets_q = current_q + tl.arange(0, BLOCK_Q)
         M_block = tl.load(M + offsets_q)
         sT = softmax_scale * tl.dot(K_block, qT_block)
-        pT = tl.maht.exp(sT - M_block[None, :]) # because element wise
+        pT = tl.math.exp(sT - M_block[None, :]) # because element wise
 
         if STAGE == 3:
             # mask where with zeros
