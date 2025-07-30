@@ -433,7 +433,9 @@ def _attn_bwd_dq(Q,
             )
             P_block = tl.where(mask, P_block, 0.0)
         dP_block = tl.dot(dO_block, V_T).to(tl.float32)
-        dS_block = P_block * (dP_block - D_block) # why are we not advancing D?
+        dS_block = P_block * (dP_block - D_block)
+        dS_block.to(tl.float32) # why are we not advancing D?
+        K_T.to(tl.float32) 
         dQ_block += softmax_scale * tl.dot(dS_block, tl.trans(K_T))
         
         # mask 
