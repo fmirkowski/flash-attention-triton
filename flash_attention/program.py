@@ -395,17 +395,17 @@ def _attn_bwd_dq(Q,
     offs_q = block_index_q * BLOCK_Q + tl.arange(0, BLOCK_Q)
     Q_block = tl.load((Q +
                       offs_q[:, None] * stride_seq + 
-                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64))
+                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim))
     dO_block = tl.load((dO +
                       offs_q[:, None] * stride_seq + 
-                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64)) 
+                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim)) 
     
     M_block = tl.load((M +
-                      offs_q).to(tl.int64)) 
+                      offs_q)) 
     
     # init D_block
     D_block = tl.load(D + offs_q[:, None] * stride_seq + 
-                    tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64)
+                    tl.arange(0, HEAD_DIM)[None, :] * stride_dim)
 
     
     dQ_block = tl.zeros_like(Q_block, dtype=tl.float32)
