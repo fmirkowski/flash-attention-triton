@@ -548,7 +548,7 @@ class TritonAttention(torch.autograd.Function):
         # finish preprocess later when you know what its needed for ;)
         _attn_bwd_preprocess[preprocess_grid](O=O, dO=dO, D=D, BLOCK_SIZE_Q=BLOCK_SIZE_MACRO, HEAD_DIM=ctx.HEAD_DIM)
         
-        dk_dv_gr = (
+        dk_dv_grid = (
             tl.cdiv(SEQ_LEN, BLOCK_SIZE_MICRO), # why micro tho?
             NUM_HEADS*BATCH_SIZE,
             1
