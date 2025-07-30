@@ -445,7 +445,7 @@ def _attn_bwd_dq(Q,
         curr_kv += BLOCK_KV
 
     dQ_block_ptr = (dQ + offs_q[:, None] * stride_seq + 
-                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim).to(tl.int64)
+                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim)
     
     tl.store(dQ_block_ptr, dQ_block)
 class TritonAttention(torch.autograd.Function):
