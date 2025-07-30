@@ -248,8 +248,8 @@ def _attn_bwd_preprocess(O, dO, D, SEQ_LEN, BLOCK_SIZE_Q: tl.constexpr, HEAD_DIM
     D_block = tl.sum(dO_block * O_block, axis=1)
     D_block_ptr = D + block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q) * HEAD_DIM # we dont need head dim stuff because its a scalr
     tl.store(D_block_ptr, D_block)
-# Pre process keernel , load programs, load manually the blocks O, dO, gt to th right points to whatg w want to operate with 
-# Why do we need to do it tho?
+    # Pre process keernel , load programs, load manually the blocks O, dO, gt to th right points to whatg w want to operate with 
+    # Why do we need to do it tho?
 
 
 @triton.jit
@@ -539,7 +539,7 @@ class TritonAttention(torch.autograd.Function):
         # Pre procss kernel, goal 
         
         preprocess_grid = lambda arg: (
-            tl.cdiv(SEQ_LEN, BLOCK_SIZE_MACRO),
+            SEQ_LEN // BLOCK_SIZE_MACRO,
             BATCH_SIZE * NUM_HEADS,
             1
         )
@@ -548,7 +548,7 @@ class TritonAttention(torch.autograd.Function):
         _attn_bwd_preprocess[preprocess_grid](O=O, dO=dO, D=D, SEQ_LEN=D.shape[-1], BLOCK_SIZE_Q=BLOCK_SIZE_MACRO, HEAD_DIM=ctx.HEAD_DIM)
         
         dk_dv_grid = (
-            tl.cdiv(SEQ_LEN, BLOCK_SIZE_MICRO), # why micro tho?
+            SEQ_LEN // BLOCK_SIZE_MICRO, # why micro th?
             NUM_HEADS*BATCH_SIZE,
             1
         )
