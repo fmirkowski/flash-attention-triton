@@ -417,7 +417,7 @@ def _attn_bwd_dq(Q,
    
     # Why does this loop have to go trhough KV related number of blocks? - because as in earlier kernel we are now iterating through every k and v - lets find out why tho ;)
 
-    num_steps = SEQ_LEN // BLOCK_KV
+    num_steps = SEQ_LEN// BLOCK_KV
     curr_kv = 0
     for step in range(num_steps):
         K_T = tl.load(K_T_block_ptr)
@@ -629,63 +629,32 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
         P[:, :, MASK == 0] = float('-inf')
     P = torch.softmax(P, dim=-1).half()
     ref_O = torch.matmul(P, V)
-    # ref_O.backward(dO)
+    ref_O.backward(dO)
     
-    # ref_dV, V.grad = V.grad.clone(), None
-    # ref_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to refference
-    # ref_dQ, Q.grad = Q.grad.clone(), None
+    ref_dV, V.grad = V.grad.clone(), None
+    ref_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to refference
+    ref_dQ, Q.grad = Q.grad.clone(), None
 
 
 
     # triton implementation
 
     tri_out = TritonAttention.apply(Q, K, V, causal, softmax_scale).half()
-    # tri_out.backward(dO)
-    # tri_dV, V.grad = V.grad.clone(), None
-    # tri_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to triference
-    # tri_dQ, Q.grad = Q.grad.clone(), None
+    tri_out.backward(dO)
+    tri_dV, V.grad = V.grad.clone(), None
+    tri_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to triference
+    tri_dQ, Q.grad = Q.grad.clone(), None
 
 
     # compare 
 
     rtol = 0.0
     atol = 1e-2
-    print(f"ref_O shape: {ref_O.shape}")
-    print(f"tri_out shape: {tri_out.shape}")
-    print(f"ref_O dtype: {ref_O.dtype}")
-    print(f"tri_out dtype: {tri_out.dtype}")
-
-    # Check if they're close element-wise
-    close_mask = torch.isclose(ref_O, tri_out, atol=atol, rtol=rtol)
-    print(f"Percentage of elements that match: {close_mask.float().mean()*100:.2f}%")
-    if not torch.allclose(ref_O, tri_out, atol=atol, rtol=rtol):
-        diff = torch.abs(ref_O - tri_out)
-        max_diff = torch.max(diff)
-        mean_diff = torch.mean(diff)
-        
-        print(f"Max absolute difference: {max_diff}")
-        print(f"Mean absolute difference: {mean_diff}")
-        
-        # Find the location of maximum difference
-        max_idx = torch.unravel_index(torch.argmax(diff), diff.shape)
-        print(f"Max diff at index {max_idx}:")
-        print(f"  ref_O value: {ref_O[max_idx]}")
-        print(f"  tri_out value: {tri_out[max_idx]}")
-        print(f"  difference: {diff[max_idx]}")
-        
-        # Show some sample differences
-        print("\nFirst few differing elements:")
-        non_close = ~close_mask
-        if non_close.any():
-            indices = torch.nonzero(non_close)[:10]  # First 10 differences
-            for i, idx in enumerate(indices):
-                idx_tuple = tuple(idx.tolist())
-                print(f"  [{i}] Index {idx_tuple}: ref={ref_O[idx_tuple]:.6f}, tri={tri_out[idx_tuple]:.6f}, diff={diff[idx_tuple]:.6f}")
 
     assert torch.allclose(ref_O, tri_out, atol=atol, rtol=rtol)
-    # assert torch.allclose(ref_dK, tri_dK, atol, rtol)
-    # assert torch.allclose(ref_dQ, tri_dQ, atol, rtol)
-    # assert torch.allclose(ref_dV, tri_dV, atol, rtol)
+    assert torch.allclose(ref_dK, tri_dK, atol=atol, rtol=rtol)
+    assert torch.allclose(ref_dQ, tri_dQ, atol=atol, rtol=rtol)
+    assert torch.allclose(ref_dV, tri_dV, atol=atol, rtol=rtol)
 
 if __name__ == "__main__": # this specifies that this will run only when the program is called directly, NOT when imported as a module, smart! and useufl
     test_op(BATCH_SIZE=2, NUM_HEADS=4, SEQ_LEN=256, HEAD_DIM=32, causal=False)
