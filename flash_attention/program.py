@@ -339,9 +339,9 @@ def _attn_bwd_dk_dv(
         #why did we do tl.advance later?
 
     # store dV and dK, write those back to HBM
-    dK_block_ptr = dK + kv_start_block[:, None] + offsets_dim[None, :] * stride_dim
+    dK_block_ptr = dK + kv_start_block + offsets_dim[None, :]
     tl.store(dK_block_ptr, dK_block)
-    dV_block_ptr = dV + kv_start_block[:, None] + offsets_dim[None, :] * stride_dim
+    dV_block_ptr = dV + kv_start_block + offsets_dim[None, :]
     tl.store(dV_block_ptr, dV_block)
     
 
