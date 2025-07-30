@@ -326,7 +326,7 @@ def _attn_bwd_dk_dv(
             
         dO_block = tl.load(dO_ptrs)
         # formula for d_Vblock form paper
-        dV_block += tl.dot(pT.to(tl.float16), dO) 
+        dV_block += tl.dot(pT.to(tl.float16), dO_block) 
         D_block = tl.load(D+offsets_q)
         dpT = tl.dot(V_block, tl.trans(dO_block)).to(tl.float32)
         dS_T = pT * (dpT - D_block).to(tl.float16)
