@@ -435,7 +435,7 @@ def _attn_bwd_dq(Q,
         dP_block = tl.dot(dO_block, V_T)
         dS_block = P_block * (dP_block - D_block)
         
-        dQ_block += softmax_scale * tl.dot(dS_block, tl.trans(K_T))
+        dQ_block += softmax_scale * tl.dot(dS_block, tl.trans(K_T)).to(tl.float32)
         
         # mask 
         # compute dQ as in paper dS 
