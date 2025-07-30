@@ -301,8 +301,8 @@ def _attn_bwd_dk_dv(
     kv_start_block =  block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV)[:, None] * stride_seq # START ARANGE FROM 0 
     K_block = tl.load(K+kv_start_block + offsets_dim[None, :] * stride_head) # creates a 2D set of addresses of the block with the addtition!
     V_block = tl.load(V+kv_start_block + offsets_dim[None, :] * stride_head)
-    dK_block = tl.zeros_like(K_block, dtype=tl.float32)
-    dV_block = tl.zeros_like(V_block, dtype=tl.float32)
+    dK_block = tl.zeros_like(K_block).to(tl.float32)
+    dV_block = tl.zeros_like(V_block).to(tl.float32)
     offsets_q = tl.arange(0, BLOCK_Q)
     # Do the same for qT and dO ptrs (for backward thorugh matmul), load it transposed because its more efficient
     qT_ptrs = Q+offsets_q[None, :] * stride_seq + offsets_dim[:, None] * stride_dim 
