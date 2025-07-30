@@ -629,11 +629,11 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
         P[:, :, MASK == 0] = float('-inf')
     P = torch.softmax(P, dim=-1).half()
     ref_O = torch.matmul(P, V)
-    ref_O.backward(dO)
+    # ref_O.backward(dO)
     
-    ref_dV, V.grad = V.grad.clone(), None
-    ref_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to refference
-    ref_dQ, Q.grad = Q.grad.clone(), None
+    # ref_dV, V.grad = V.grad.clone(), None
+    # ref_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to refference
+    # ref_dQ, Q.grad = Q.grad.clone(), None
 
 
 
@@ -649,7 +649,7 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     # compare 
 
     rtol = 0.0
-    atol = 1000.0
+    atol = 1e-2
 
     assert torch.allclose(ref_O, tri_out, atol, rtol)
     # assert torch.allclose(ref_dK, tri_dK, atol, rtol)
