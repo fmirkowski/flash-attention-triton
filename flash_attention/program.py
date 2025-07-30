@@ -514,7 +514,7 @@ class TritonAttention(torch.autograd.Function):
         ctx.softmax_scale = softmax_scale
         ctx.HEAD_DIM = HEAD_DIM
         ctx.causal = causal
-        return 0
+        return O
 
 
     # chain rule is bascially product of gradients before 
