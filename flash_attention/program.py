@@ -652,10 +652,29 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     rtol = 0.0
     atol = 1e-2
 
-    assert torch.allclose(ref_O, tri_out, atol=atol, rtol=rtol)
-    assert torch.allclose(ref_dK, tri_dK, atol=atol, rtol=rtol)
-    assert torch.allclose(ref_dQ, tri_dQ, atol=atol, rtol=rtol)
-    assert torch.allclose(ref_dV, tri_dV, atol=atol, rtol=rtol)
+    # Check shapes match
+    assert ref_O.shape == tri_out.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM)
+    assert ref_dK.shape == tri_dK.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM)
+    assert ref_dQ.shape == tri_dQ.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM) 
+    assert ref_dV.shape == tri_dV.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM)
+
+    # Check mask consistency
+    if causal:
+        mask_sum = MASK.sum()
+        expected_sum = (SEQ_LEN * (SEQ_LEN + 1)) / 2  # Sum of lower triangular matrix
+        assert mask_sum.item() == expected_sum, "Causal mask is not consistent"
+
+    # Print max differences
+    print("Reference output max diff:", (ref_O - tri_out).abs().max().item())
+    print("Reference dK max diff:", (ref_dK - tri_dK).abs().max().item()) 
+    print("Reference dQ max diff:", (ref_dQ - tri_dQ).abs().max().item())
+    print("Reference dV max diff:", (ref_dV - tri_dV).abs().max().item())
+
+    # Check values match within tolerance
+    assert torch.allclose(ref_O, tri_out, atol=atol, rtol=rtol), "Output values don't match"
+    assert torch.allclose(ref_dK, tri_dK, atol=atol, rtol=rtol), "dK values don't match"
+    assert torch.allclose(ref_dQ, tri_dQ, atol=atol, rtol=rtol), "dQ values don't match"
+    assert torch.allclose(ref_dV, tri_dV, atol=atol, rtol=rtol), "dV values don't match"
 
 if __name__ == "__main__": # this specifies that this will run only when the program is called directly, NOT when imported as a module, smart! and useufl
     test_op(BATCH_SIZE=2, NUM_HEADS=4, SEQ_LEN=256, HEAD_DIM=32, causal=False)
