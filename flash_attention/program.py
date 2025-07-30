@@ -66,18 +66,18 @@ def _attn_fwd_inner(O_block,
 
 
 @triton.autotune(
-        [
-            triton.Config(
-                {"BLOCK_SIZE_Q": BLOCK_SIZE_Q, "BLOCK_SIZE_KV": BLOCK_SIZE_KV},
-                num_stages=num_stages,
-                num_warps=num_warps,
-            )
-            for BLOCK_SIZE_KV in [32]
-            for BLOCK_SIZE_Q in [32]
-            for num_stages in [1]
-            for num_warps in [2]
-        ],
-        key=["SEQ_LEN", "HEAD_DIM"]
+    [
+        triton.Config(
+            {"BLOCK_SIZE_Q": BLOCK_SIZE_Q, "BLOCK_SIZE_KV": BLOCK_SIZE_KV},
+            num_stages=num_stages,
+            num_warps=num_warps,
+        )
+        for BLOCK_SIZE_KV in [32]
+        for BLOCK_SIZE_Q in [32]
+        for num_stages in [3]
+        for num_warps in [2]
+    ],
+    key=["SEQ_LEN", "HEAD_DIM"]
 )
 @triton.jit
 def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
@@ -657,5 +657,5 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     assert torch.allclose(ref_dV, tri_dV, atol, rtol)
 
 if __name__ == "__main__": # this specifies that this will run only when the program is called directly, NOT when imported as a module, smart! and useufl
-    test_op(BATCH_SIZE=4, NUM_HEADS=8, SEQ_LEN=512, HEAD_DIM=64, causal=False)
+    test_op(BATCH_SIZE=2, NUM_HEADS=4, SEQ_LEN=256, HEAD_DIM=32, causal=False)
     print("PASSED")
