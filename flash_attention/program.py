@@ -681,7 +681,8 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
             for i, idx in enumerate(indices):
                 idx_tuple = tuple(idx.tolist())
                 print(f"  [{i}] Index {idx_tuple}: ref={ref_O[idx_tuple]:.6f}, tri={tri_out[idx_tuple]:.6f}, diff={diff[idx_tuple]:.6f}")
-    assert torch.allclose(ref_O, tri_out, atol, rtol)
+
+    assert torch.allclose(ref_O, tri_out, atol=atol, rtol=rtol)
     # assert torch.allclose(ref_dK, tri_dK, atol, rtol)
     # assert torch.allclose(ref_dQ, tri_dQ, atol, rtol)
     # assert torch.allclose(ref_dV, tri_dV, atol, rtol)
