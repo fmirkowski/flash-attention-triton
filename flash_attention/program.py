@@ -398,7 +398,7 @@ def _attn_bwd_dq(Q,
                       tl.arange(0, HEAD_DIM)[None, :] * stride_dim))
     dO_block = tl.load((dO +
                       offs_q[:, None] * stride_seq + 
-                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim)) 
+                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim)).to(tl.float32)
     
     M_block = tl.load((M +
                       offs_q)) 
