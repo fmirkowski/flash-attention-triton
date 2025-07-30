@@ -522,7 +522,7 @@ class TritonAttention(torch.autograd.Function):
     def backward(ctx, dO):
         Q, K, V, O, M = ctx.saved_tensors
         # makee dO assert contigous, asserte strides
-        assert dO.is_contigous()
+        assert dO.is_contiguous()
         assert Q.stride == K.stride == V.stride == O.stride == dO.stride
         # init dQ, DK, dV
         dQ = torch.empty_like(Q)
