@@ -408,7 +408,7 @@ def _attn_bwd_dq(Q,
                     tl.arange(0, HEAD_DIM)[None, :] * stride_dim)
 
     
-    dQ_block = tl.zeros_like(Q_block)
+    dQ_block = tl.zeros_like(Q_block).to(tl.float32)
     offset_kv = tl.arange(0, BLOCK_KV)
     # access k and v pointers as transposed blovk, load them transposed because its then free 
     K_T_block_ptr = K + offset_kv[None, :] * stride_seq + tl.arange(0, HEAD_DIM)[:, None] * stride_dim
