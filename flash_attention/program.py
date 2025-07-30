@@ -157,7 +157,7 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
 
     Q_block = tl.load(Q_block_ptr)
     
-    # O_block = tl.load(O_block_ptr)
+    # O_block = tl.load(O_block_ptr) we will use the pointer to store actually, not load now because we already have O_block, there is nothing to load from
     #  initlaisatpon
     # we'll load K and V later, we'll load specific blocks to save on compute and not move the whole thing at once
     
