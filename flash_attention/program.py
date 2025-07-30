@@ -54,7 +54,7 @@ def _attn_fwd_inner(O_block,
 
         V_block = tl.load(V_block_ptr)
         P_block = P_block.to(tl.float16)
-        O_block = O_block * alpha[:, None] # Why am i doing None? because otherwise it wouldnt be able to do element wise (ie shape would mismatch) element wise is equivalent to diagonal
+        O_block = O_block * alpha[:, None] # in the first iteration it will still be zeros but then it will update
         O_block = tl.dot(P_block, V_block, O_block) # equivalent too O*alpha + P @ V
 
         m_i = m_ij
@@ -157,7 +157,7 @@ def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
 
     Q_block = tl.load(Q_block_ptr)
     
-    O_block = tl.load(O_block_ptr)
+    # O_block = tl.load(O_block_ptr)
     #  initlaisatpon
     # we'll load K and V later, we'll load specific blocks to save on compute and not move the whole thing at once
     
