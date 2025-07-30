@@ -417,7 +417,7 @@ def _attn_bwd_dq(Q,
    
     # Why does this loop have to go trhough KV related number of blocks? - because as in earlier kernel we are now iterating through every k and v - lets find out why tho ;)
 
-    num_steps = NUM_HEADS // BLOCK_KV
+    num_steps = SEQ_LEN // BLOCK_KV
     curr_kv = 0
     for step in range(num_steps):
         K_T = tl.load(K_T_block_ptr)
