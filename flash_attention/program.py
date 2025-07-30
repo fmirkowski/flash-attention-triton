@@ -417,13 +417,14 @@ def _attn_bwd_dq(Q,
    
     # Why does this loop have to go trhough KV related number of blocks? - because as in earlier kernel we are now iterating through every k and v - lets find out why tho ;)
 
-    num_steps = SEQ_LEN// BLOCK_KV
+    num_steps = SEQ_LEN // BLOCK_KV
     curr_kv = 0
-    for step in range(num_steps):
+    for block_idx in range(num_steps):
         K_T = tl.load(K_T_block_ptr)
         V_T = tl.load(V_T_block_ptr)
-        S_block = softmax_scale * tl.dot(Q_block, K_T)
-        P_block = tl.math.exp(S_block - M_block)
+        S_block = softmax_scale * tl.dot(Q_block, K_T) # [BLOCK_Q, BLOCK_KV] => [128, 32]
+        print(f"M_block shape: {M_block.shape}")
+        P_block = tl.math.exp(S_block - M_block) 
 
         if STAGE == 3:
             offset_kv += curr_kv
