@@ -423,9 +423,7 @@ def _attn_bwd_dq(Q,
         K_T = tl.load(K_T_block_ptr)
         V_T = tl.load(V_T_block_ptr)
         S_block = softmax_scale * tl.dot(Q_block, K_T) # [BLOCK_Q, BLOCK_KV] => [128, 32]
-        # For debugging CUDA kernels, we can use tl.debug_barrier() and print scalars:
-        tl.debug_barrier()
-        tl.printf("M_block dims: %d, %d\n", M_block.shape[0], M_block.shape[1])
+        
         P_block = tl.math.exp(S_block - M_block) 
 
         if STAGE == 3:
