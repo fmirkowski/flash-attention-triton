@@ -424,7 +424,7 @@ def _attn_bwd_dq(Q,
         V_T = tl.load(V_T_block_ptr)
         S_block = softmax_scale * tl.dot(Q_block, K_T) # [BLOCK_Q, BLOCK_KV] => [128, 32]
         
-        P_block = tl.math.exp(S_block - M_block) 
+        P_block = tl.math.exp(S_block - M_block[:, None]) 
 
         if STAGE == 3:
             offset_kv += curr_kv
