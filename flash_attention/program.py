@@ -544,7 +544,7 @@ class TritonAttention(torch.autograd.Function):
             BATCH_SIZE * NUM_HEADS,
             1
         )
-        D = torch.empty(M)
+        D = torch.empty_like(M)
         # finish preprocess later when you know what its needed for ;)
         _attn_bwd_preprocess[preprocess_grid](O=O, dO=dO, D=D, BLOCK_SIZE_Q=BLOCK_SIZE_MACRO, HEAD_DIM=ctx.HEAD_DIM)
         
