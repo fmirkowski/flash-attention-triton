@@ -658,7 +658,29 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     # Check if they're close element-wise
     close_mask = torch.isclose(ref_O, tri_out, atol=atol, rtol=rtol)
     print(f"Percentage of elements that match: {close_mask.float().mean()*100:.2f}%")
-
+    if not torch.allclose(ref_O, tri_out, atol=atol, rtol=rtol):
+        diff = torch.abs(ref_O - tri_out)
+        max_diff = torch.max(diff)
+        mean_diff = torch.mean(diff)
+        
+        print(f"Max absolute difference: {max_diff}")
+        print(f"Mean absolute difference: {mean_diff}")
+        
+        # Find the location of maximum difference
+        max_idx = torch.unravel_index(torch.argmax(diff), diff.shape)
+        print(f"Max diff at index {max_idx}:")
+        print(f"  ref_O value: {ref_O[max_idx]}")
+        print(f"  tri_out value: {tri_out[max_idx]}")
+        print(f"  difference: {diff[max_idx]}")
+        
+        # Show some sample differences
+        print("\nFirst few differing elements:")
+        non_close = ~close_mask
+        if non_close.any():
+            indices = torch.nonzero(non_close)[:10]  # First 10 differences
+            for i, idx in enumerate(indices):
+                idx_tuple = tuple(idx.tolist())
+                print(f"  [{i}] Index {idx_tuple}: ref={ref_O[idx_tuple]:.6f}, tri={tri_out[idx_tuple]:.6f}, diff={diff[idx_tuple]:.6f}")
     assert torch.allclose(ref_O, tri_out, atol, rtol)
     # assert torch.allclose(ref_dK, tri_dK, atol, rtol)
     # assert torch.allclose(ref_dQ, tri_dQ, atol, rtol)
