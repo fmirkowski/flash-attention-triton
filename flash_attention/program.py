@@ -330,7 +330,7 @@ def _attn_bwd_dk_dv(
         D_block = tl.load(D+offsets_q)
         dpT = tl.dot(V_block, tl.trans(dO_block)).to(tl.float32)
         dS_T = pT * (dpT - D_block).to(tl.float16)
-        dK_block += softmax_scale * tl.dot(dS_T, tl.trans(qT_block))
+        dK_block += softmax_scale * tl.dot(dS_T, tl.trans(qT_block).to(tl.float16))
         
         
         qT_ptrs += BLOCK_Q * stride_seq
