@@ -404,8 +404,7 @@ def _attn_bwd_dq(Q,
                       offs_q)) 
     
     # init D_block
-    D_block = tl.load(D + offs_q[:, None] * stride_seq + 
-                    tl.arange(0, HEAD_DIM)[None, :] * stride_dim)
+    D_block = tl.load(D + offs_q)
 
     
     dQ_block = tl.zeros_like(Q_block).to(tl.float32)
