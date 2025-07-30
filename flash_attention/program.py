@@ -239,7 +239,6 @@ def _attn_bwd_preprocess(O, dO, D, SEQ_LEN, BLOCK_SIZE_Q: tl.constexpr, HEAD_DIM
     D += batch_head_index * SEQ_LEN * HEAD_DIM
     dO += batch_head_index * SEQ_LEN * HEAD_DIM
     dO += block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None] * HEAD_DIM + tl.arange(0, HEAD_DIM)[None, :]
-    # D += block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None] * HEAD_DIM + tl.arange(0, HEAD_DIM)[None, :]
     O += block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None] * HEAD_DIM + tl.arange(0, HEAD_DIM)[None, :]
 
     # D_block = tl.load(D).to(tl.float32) No need to load D we dont need its contents, its just a mem pinter for us
@@ -247,8 +246,8 @@ def _attn_bwd_preprocess(O, dO, D, SEQ_LEN, BLOCK_SIZE_Q: tl.constexpr, HEAD_DIM
     dO_block = tl.load(dO).to(tl.float32)
     
     D_block = tl.sum(dO_block * O_block, axis=1)
-    # D_block_ptr = D + block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q) * O.stride(3) # we dont need head dim stuff because its a scalr
-    tl.store(D, D_block)
+    D_block_ptr = D + block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q) * HEAD_DIM # we dont need head dim stuff because its a scalr
+    tl.store(D_block_ptr, D_block)
 # Pre process keernel , load programs, load manually the blocks O, dO, gt to th right points to whatg w want to operate with 
 # Why do we need to do it tho?
 
