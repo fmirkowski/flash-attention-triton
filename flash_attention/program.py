@@ -650,6 +650,14 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
 
     rtol = 0.0
     atol = 1e-2
+    print(f"ref_O shape: {ref_O.shape}")
+    print(f"tri_out shape: {tri_out.shape}")
+    print(f"ref_O dtype: {ref_O.dtype}")
+    print(f"tri_out dtype: {tri_out.dtype}")
+
+    # Check if they're close element-wise
+    close_mask = torch.isclose(ref_O, tri_out, atol=atol, rtol=rtol)
+    print(f"Percentage of elements that match: {close_mask.float().mean()*100:.2f}%")
 
     assert torch.allclose(ref_O, tri_out, atol, rtol)
     # assert torch.allclose(ref_dK, tri_dK, atol, rtol)
