@@ -398,7 +398,7 @@ def _attn_bwd_dq(Q,
                       tl.arange(0, HEAD_DIM)[None, :] * stride_dim))
     dO_block = tl.load((dO +
                       offs_q[:, None] * stride_seq + 
-                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim)).to(tl.float32)
+                      tl.arange(0, HEAD_DIM)[None, :] * stride_dim))
     
     M_block = tl.load((M +
                       offs_q)) 
@@ -408,7 +408,7 @@ def _attn_bwd_dq(Q,
                     tl.arange(0, HEAD_DIM)[None, :] * stride_dim)
 
     
-    dQ_block = tl.zeros_like(Q_block).to(tl.float32)
+    dQ_block = tl.zeros_like(Q_block)
     offset_kv = tl.arange(0, BLOCK_KV)
     # access k and v pointers as transposed blovk, load them transposed because its then free 
     K_T_block_ptr = K + offset_kv[None, :] * stride_seq + tl.arange(0, HEAD_DIM)[:, None] * stride_dim
@@ -432,10 +432,9 @@ def _attn_bwd_dq(Q,
                 offs_q[:, None] >= offset_kv[None, :]
             )
             P_block = tl.where(mask, P_block, 0.0)
-        dP_block = tl.dot(dO_block, V_T).to(tl.float32)
+        dP_block = tl.dot(dO_block, V_T)
         dS_block = P_block * (dP_block - D_block)
-        dS_block.to(tl.float32) # why are we not advancing D?
-        K_T.to(tl.float32) 
+        
         dQ_block += softmax_scale * tl.dot(dS_block, tl.trans(K_T))
         
         # mask 
