@@ -254,7 +254,7 @@ def _attn_bwd_preprocess(O, dO, D, SEQ_LEN, BLOCK_SIZE_Q: tl.constexpr, HEAD_DIM
 
 @triton.jit
 def _attn_bwd_dk_dv(
-    Q,
+    Q, 
     K, # SHAPE: [batch_index, heads_index, block_index:block_index+BLOCK_KV (mem address), 0:HEAD_DIM (we want all, and we specify that in the arange)]
     V,
     softmax_scale,
@@ -326,11 +326,11 @@ def _attn_bwd_dk_dv(
             
         dO_block = tl.load(dO_ptrs)
         # formula for d_Vblock form paper
-        dV_block += tl.dot(pT.to(tl.float16), dO_block) 
+        dV_block += tl.dot(pT, dO_block.to(tl.float32)).to(tl.float32)
         D_block = tl.load(D+offsets_q)
         dpT = tl.dot(V_block, tl.trans(dO_block)).to(tl.float32)
         dS_T = pT * (dpT - D_block).to(tl.float16)
-        dK_block += softmax_scale * tl.dot(dS_T, tl.trans(qT_block).to(tl.float32))
+        dK_block += softmax_scale * tl.dot(dS_T, tl.trans(qT_block).to(tl.float32)) # float32?
         
         
         qT_ptrs += BLOCK_Q * stride_seq
@@ -440,7 +440,7 @@ def _attn_bwd_dq(Q,
         # compute dQ as in paper dS 
         # movepointers and then store
         K_T_block_ptr += BLOCK_KV * stride_seq
-        V_T_block_ptr += BLOCK_KV * stride_seq
+        V_T_block_ptr += BLOCK_KV * stride_seq,
         curr_kv += BLOCK_KV
 
     dQ_block_ptr = (dQ + offs_q[:, None] * stride_seq + 
@@ -675,6 +675,12 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     assert torch.allclose(ref_dK, tri_dK, atol=atol, rtol=rtol), "dK values don't match"
     assert torch.allclose(ref_dQ, tri_dQ, atol=atol, rtol=rtol), "dQ values don't match"
     assert torch.allclose(ref_dV, tri_dV, atol=atol, rtol=rtol), "dV values don't match"
+
+
+    # Reference output max diff: 6.103515625e-05
+    # Reference dK max diff: 221.875
+    # Reference dQ max diff: 0.10546875
+    # Reference dV max diff: 53.3125
 
 if __name__ == "__main__": # this specifies that this will run only when the program is called directly, NOT when imported as a module, smart! and useufl
     test_op(BATCH_SIZE=2, NUM_HEADS=4, SEQ_LEN=256, HEAD_DIM=32, causal=False)
