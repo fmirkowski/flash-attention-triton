@@ -426,7 +426,7 @@ def _attn_bwd_dq(Q,
         P_block = tl.math.exp(S_block - M_block[:, None]) 
 
         if STAGE == 3:
-            offset_kv += curr_kv
+            offset_kv = curr_kv + tl.arange(0, BLOCK_KV)
             mask = (
                 offs_q[:, None] >= offset_kv[None, :]
             )
