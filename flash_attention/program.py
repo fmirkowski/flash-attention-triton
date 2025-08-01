@@ -441,7 +441,8 @@ def _attn_bwd_dq(Q,
         # compute dQ as in paper dS 
         # movepointers and then store
         K_T_block_ptr += BLOCK_KV * stride_seq
-        V_T_block_ptr += BLOCK_KV * stride_seq,
+        V_T_block_ptr += BLOCK_KV * stride_seq # python saw this with comma as (,) because of += and interpreted asa a tuple look at 
+        # AssertionError("cannot convert (<triton.language.core.tensor object at 0x7db3a032c6d0>,) remember that code hints are very informative so read them throughly
         curr_kv += BLOCK_KV
 
     dQ_block_ptr = (dQ + offs_q[:, None] * stride_seq + 
