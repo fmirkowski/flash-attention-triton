@@ -51,7 +51,7 @@ def _attn_fwd_inner(O_block,
         P_block = tl.math.exp(QK_block - m_ij[:, None])
         alpha = tl.math.exp((m_i - m_ij))
         l_i = l_i * alpha + tl.sum(P_block, 1)
-
+        
         V_block = tl.load(V_block_ptr)
         P_block = P_block.to(tl.float16)
         O_block = O_block * alpha[:, None] # in the first iteration it will still be zeros but then it will update
@@ -72,7 +72,7 @@ def _attn_fwd_inner(O_block,
             num_stages=num_stages,
             num_warps=num_warps,
         )
-        for BLOCK_SIZE_KV in [32]
+        for BLOCK_SIZE_KV in [16]
         for BLOCK_SIZE_Q in [32]
         for num_stages in [3]
         for num_warps in [2]
@@ -304,6 +304,7 @@ def _attn_bwd_dk_dv(
     dV_block = tl.zeros_like(V_block).to(tl.float32)
     offsets_q = tl.arange(0, BLOCK_Q)
     # Do the same for qT and dO ptrs (for backward thorugh matmul), load it transposed because its more efficient
+
     qT_ptrs = Q+offsets_q[None, :] * stride_seq + offsets_dim[:, None] * stride_dim 
     dO_ptrs = dO+offsets_q[:, None] * stride_seq + offsets_dim[None, :] * stride_dim 
     current_q = 0 # later in the loop just update it
@@ -525,6 +526,7 @@ class TritonAttention(torch.autograd.Function):
         # makee dO assert contigous, asserte strides
         assert dO.is_contiguous()
         assert Q.stride() == K.stride() == V.stride() == O.stride() == dO.stride()
+        # assert Q.stride(0) == Q.shape[-1] * Q.shape[-2] * Q.shape[-3]
         # init dQ, DK, dV
         dQ = torch.empty_like(Q)
         dV = torch.empty_like(V)
@@ -532,7 +534,7 @@ class TritonAttention(torch.autograd.Function):
 
         BATCH_SIZE, NUM_HEADS, SEQ_LEN = Q.shape[:3]
         NUM_WARPS, NUM_STAGES = 4, 3
-        BLOCK_SIZE_MICRO, BLOCK_SIZE_MACRO = 32, 128 # M/4d in the paper, because M is the total capacity for scalars in SRAM and 4d becausue we split to 4 blocks lol
+        BLOCK_SIZE_MICRO, BLOCK_SIZE_MACRO = 16, 32 # M/4d in the paper, because M is the total capacity for scalars in SRAM and 4d becausue we split to 4 blocks lol
 
 
 
@@ -574,8 +576,8 @@ class TritonAttention(torch.autograd.Function):
             stride_dim=K.stride(3),
             NUM_HEADS=NUM_HEADS,
             SEQ_LEN=SEQ_LEN,
-            BLOCK_Q=BLOCK_SIZE_MACRO,
-            BLOCK_KV=BLOCK_SIZE_MICRO,
+            BLOCK_Q=BLOCK_SIZE_MICRO,
+            BLOCK_KV=BLOCK_SIZE_MACRO,
             HEAD_DIM=ctx.HEAD_DIM,
             STAGE=stage,)
         
@@ -672,10 +674,10 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     print("Reference dV max diff:", (ref_dV - tri_dV).abs().max().item())
 
     # Check values match within tolerance
-    # assert torch.allclose(ref_O, tri_out, atol=atol, rtol=rtol), "Output values don't match"
+    assert torch.allclose(ref_O, tri_out, atol=atol, rtol=rtol), "Output values don't match"
     assert torch.allclose(ref_dK, tri_dK, atol=atol, rtol=rtol), "dK values don't match"
     assert torch.allclose(ref_dQ, tri_dQ, atol=atol, rtol=rtol), "dQ values don't match"
-    # assert torch.allclose(ref_dV, tri_dV, atol=atol, rtol=rtol), "dV values don't match"
+    assert torch.allclose(ref_dV, tri_dV, atol=atol, rtol=rtol), "dV values don't match"
 
 
     # Reference output max diff: 6.103515625e-05
@@ -684,5 +686,9 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     # Reference dV max diff: 53.3125
 
 if __name__ == "__main__": # this specifies that this will run only when the program is called directly, NOT when imported as a module, smart! and useufl
-    test_op(BATCH_SIZE=2, NUM_HEADS=4, SEQ_LEN=256, HEAD_DIM=32, causal=False)
+    test_op(BATCH_SIZE=2, NUM_HEADS=16, SEQ_LEN=1024, HEAD_DIM=32, causal=True)
+    import gc
+    gc.collect()
+    torch.cuda.empty_cache()
+
     print("PASSED")
