@@ -294,13 +294,13 @@ def _attn_bwd_dk_dv(
     dQ += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
     dV += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
     dK += (batch_index * stride_batch + head_index * stride_head).to(tl.int64)
-    # [:, None] is the same thing as unsqueeze
+    # [:, None] is the same thing as unsqueeze(1)
 
     # we need to add the arange because block_index_kv * BLOCK_KV (specific row, where it starts) + tl.arange(0, BLOCK_KV)[:, None] – specyfing all rows that we will need to cover * stride_seq – specific memory addresses of those rows
     offsets_dim = tl.arange(0, HEAD_DIM)
     kv_start_block =  block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV)[:, None] * stride_seq # START ARANGE FROM 0 
-    K_block = tl.load(K+kv_start_block + offsets_dim[None, :] * stride_head) # creates a 2D set of addresses of the block with the addtition!
-    V_block = tl.load(V+kv_start_block + offsets_dim[None, :] * stride_head)
+    K_block = tl.load(K+kv_start_block + offsets_dim[None, :] * stride_dim) # creates a 2D set of addresses of the block with the addtition!
+    V_block = tl.load(V+kv_start_block + offsets_dim[None, :] * stride_dim)
     dK_block = tl.zeros_like(K_block).to(tl.float32)
     dV_block = tl.zeros_like(V_block).to(tl.float32)
     offsets_q = tl.arange(0, BLOCK_Q)
@@ -323,7 +323,6 @@ def _attn_bwd_dk_dv(
             # mask where with zeros
             mask = (offsets_q[:, None] >= (block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV))[None, :]) # current?
             pT = tl.where(mask, pT, 0.0)
-            
         dO_block = tl.load(dO_ptrs)
         # formula for d_Vblock form paper
         dV_block += tl.dot(pT, dO_block.to(tl.float32)).to(tl.float32)
@@ -335,7 +334,9 @@ def _attn_bwd_dk_dv(
         
         qT_ptrs += BLOCK_Q * stride_seq
         dO_ptrs += BLOCK_Q * stride_seq
+        # why not add stride 
         current_q += BLOCK_Q
+        
         #why did we do tl.advance later?
 
     # store dV and dK, write those back to HBM
