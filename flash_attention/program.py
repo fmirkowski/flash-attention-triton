@@ -321,7 +321,7 @@ def _attn_bwd_dk_dv(
 
         if STAGE == 3:
             # mask where with zeros
-            mask = (offsets_q[:, None] >= (block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV))[None, :]) # current?
+            mask = (offsets_q[None, :] >= (block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV))[:, None]) # current?
             pT = tl.where(mask, pT, 0.0)
         dO_block = tl.load(dO_ptrs)
         # formula for d_Vblock form paper
