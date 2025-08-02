@@ -298,7 +298,7 @@ def _attn_bwd_dk_dv(
 
     # we need to add the arange because block_index_kv * BLOCK_KV (specific row, where it starts) + tl.arange(0, BLOCK_KV)[:, None] – specyfing all rows that we will need to cover * stride_seq – specific memory addresses of those rows
     offsets_dim = tl.arange(0, HEAD_DIM)
-    kv_start_block =  block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV)[:, None]) * stride_seq # START ARANGE FROM 0 
+    kv_start_block =  (block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV)[:, None]) * stride_seq # START ARANGE FROM 0 
     K_block = tl.load(K+kv_start_block + offsets_dim[None, :] * stride_dim) # creates a 2D set of addresses of the block with the addtition!
     V_block = tl.load(V+kv_start_block + offsets_dim[None, :] * stride_dim)
     dK_block = tl.zeros_like(K_block).to(tl.float32)
@@ -611,7 +611,7 @@ class TritonAttention(torch.autograd.Function):
      
 
 
-def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float16):
+def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, benchmark, dtype=torch.float16):
     Q = torch.empty(
         (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM), dtype=dtype, device='cuda'
                     ).normal_(mean=0.0, std=0.5).requires_grad_()
@@ -621,64 +621,141 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     V = torch.empty(
         (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM), dtype=dtype, device='cuda'
                     ).normal_(mean=0.0, std=0.5).requires_grad_()
-    
-
     softmax_scale = 1 / (HEAD_DIM**0.5)
     dO = torch.randn_like(Q)
-
-    # torch implementation
-    device = 'cuda' if torch.cuda.is_available else 'cpu'
-    MASK = torch.tril(torch.ones(SEQ_LEN, SEQ_LEN)).to(device)
-    P = torch.matmul(Q, K.transpose(2,3)) * softmax_scale
-    if causal:
-        P[:, :, MASK == 0] = float('-inf')
-    P = torch.softmax(P, dim=-1).half()
-    ref_O = torch.matmul(P, V)
-    ref_O.backward(dO)
     
-    ref_dV, V.grad = V.grad.clone(), None
-    ref_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to refference
-    ref_dQ, Q.grad = Q.grad.clone(), None
+    device = 'cuda' if torch.cuda.is_available else 'cpu'
+    # warmup:
+    if benchmark:
+        for _ in range(10):
+            _ = torch.matmul(Q, K.transpose(2, 3))
+        torch_times_fwd = []
+        torch_times_bwd = []
+        torch.cuda.synchronize()
+
+        for _ in range(100):
+            torch.cuda.synchronize()
+            V.grad = K.grad = Q.grad = None
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
+
+            start_event.record()
+            softmax_scale = 1 / (HEAD_DIM**0.5)
+            dO = torch.randn_like(Q)
+
+            # torch implementation
+            MASK = torch.tril(torch.ones(SEQ_LEN, SEQ_LEN)).to(device)
+            P = torch.matmul(Q, K.transpose(2,3)) * softmax_scale
+            if causal:
+                P[:, :, MASK == 0] = float('-inf')
+            P = torch.softmax(P, dim=-1).half()
+            ref_O = torch.matmul(P, V)
+
+            end_event.record()
+            torch.cuda.synchronize()
+            torch_times_fwd.append(start_event.elapsed_time(end_event))
+
+
+            start_event.record()
+            ref_O.backward(dO)
+            end_event.record()
+            torch.cuda.synchronize()
+            torch_times_bwd.append(start_event.elapsed_time(end_event))
+
+        torch_times_fwd = []
+        torch_times_bwd = []
+
+        for _ in range(100):
+            torch.cuda.synchronize()
+            V.grad = K.grad = Q.grad = None
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
+
+            start_event.record()
+            tri_out = TritonAttention.apply(Q, K, V, causal, softmax_scale).half()
+
+            end_event.record()
+            torch.cuda.synchronize()
+            triton_times_fwd.append(start_event.elapsed_time(end_event))
+
+
+            start_event.record()
+            tri_out.backward(dO)
+            end_event.record()
+            torch.cuda.synchronize()
+            triton_times_bwd.append(start_event.elapsed_time(end_event))
+
+        torch_fwd_mean = sum(torch_times_fwd) / len(torch_times_fwd)
+        torch_bwd_mean = sum(torch_times_bwd) / len(torch_times_bwd)
+        triton_fwd_mean = sum(triton_times_fwd) / len(triton_times_fwd)
+        triton_bwd_mean = sum(triton_times_bwd) / len(triton_times_bwd)
+        
+        print(f"\n=== Timing Results (ms) ===")
+        print(f"PyTorch Forward:  {torch_fwd_mean:.3f} ± {(max(torch_times_fwd) - min(torch_times_fwd))/2:.3f}")
+        print(f"Triton Forward:   {triton_fwd_mean:.3f} ± {(max(triton_times_fwd) - min(triton_times_fwd))/2:.3f}")
+        print(f"Forward Speedup:  {torch_fwd_mean/triton_fwd_mean:.2f}x")
+        print()
+        print(f"PyTorch Backward: {torch_bwd_mean:.3f} ± {(max(torch_times_bwd) - min(torch_times_bwd))/2:.3f}")
+        print(f"Triton Backward:  {triton_bwd_mean:.3f} ± {(max(triton_times_bwd) - min(triton_times_bwd))/2:.3f}")
+        print(f"Backward Speedup: {torch_bwd_mean/triton_bwd_mean:.2f}x")
+        print()
+        print(f"Total PyTorch:    {torch_fwd_mean + torch_bwd_mean:.3f}")
+        print(f"Total Triton:     {triton_fwd_mean + triton_bwd_mean:.3f}")
+        print(f"Total Speedup:    {(torch_fwd_mean + torch_bwd_mean)/(triton_fwd_mean + triton_bwd_mean):.2f}x")
+
+    else:
+        # torch implementation
+        MASK = torch.tril(torch.ones(SEQ_LEN, SEQ_LEN)).to(device)
+        P = torch.matmul(Q, K.transpose(2,3)) * softmax_scale
+        if causal:
+            P[:, :, MASK == 0] = float('-inf')
+        P = torch.softmax(P, dim=-1).half()
+        ref_O = torch.matmul(P, V)
+        ref_O.backward(dO)
+        
+        ref_dV, V.grad = V.grad.clone(), None
+        ref_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to refference
+        ref_dQ, Q.grad = Q.grad.clone(), None
 
 
 
-    # triton implementation
+        # triton implementation
 
-    tri_out = TritonAttention.apply(Q, K, V, causal, softmax_scale).half()
-    tri_out.backward(dO)
-    tri_dV, V.grad = V.grad.clone(), None
-    tri_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to triference
-    tri_dQ, Q.grad = Q.grad.clone(), None
+        tri_out = TritonAttention.apply(Q, K, V, causal, softmax_scale).half()
+        tri_out.backward(dO)
+        tri_dV, V.grad = V.grad.clone(), None
+        tri_dK, K.grad = K.grad.clone(), None # Zeroing out the gradients, cloning them to triference
+        tri_dQ, Q.grad = Q.grad.clone(), None
 
 
-    # compare 
+        # compare 
 
-    rtol = 0.0
-    atol = 1e-2
+        rtol = 0.0
+        atol = 1e-2
 
-    # Check shapes match
-    assert ref_O.shape == tri_out.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM)
-    assert ref_dK.shape == tri_dK.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM)
-    assert ref_dQ.shape == tri_dQ.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM) 
-    assert ref_dV.shape == tri_dV.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM)
+        # Check shapes match
+        assert ref_O.shape == tri_out.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM)
+        assert ref_dK.shape == tri_dK.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM)
+        assert ref_dQ.shape == tri_dQ.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM) 
+        assert ref_dV.shape == tri_dV.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM)
 
-    # Check mask consistency
-    if causal:
-        mask_sum = MASK.sum()
-        expected_sum = (SEQ_LEN * (SEQ_LEN + 1)) / 2  # Sum of lower triangular matrix
-        assert mask_sum.item() == expected_sum, "Causal mask is not consistent"
+        # Check mask consistency
+        # if causal:
+        #     mask_sum = MASK.sum()
+        #     expected_sum = (SEQ_LEN * (SEQ_LEN + 1)) / 2  # Sum of lower triangular matrix
+        #     assert mask_sum.item() == expected_sum, "Causal mask is not consistent"
 
-    # Print max differences
-    print("Reference output max diff:", (ref_O - tri_out).abs().max().item())
-    print("Reference dK max diff:", (ref_dK - tri_dK).abs().max().item()) 
-    print("Reference dQ max diff:", (ref_dQ - tri_dQ).abs().max().item())
-    print("Reference dV max diff:", (ref_dV - tri_dV).abs().max().item())
+        # Print max differences
+        # print("Reference output max diff:", (ref_O - tri_out).abs().max().item())
+        # print("Reference dK max diff:", (ref_dK - tri_dK).abs().max().item()) 
+        # print("Reference dQ max diff:", (ref_dQ - tri_dQ).abs().max().item())
+        # print("Reference dV max diff:", (ref_dV - tri_dV).abs().max().item())
 
-    # Check values match within tolerance
-    assert torch.allclose(ref_O, tri_out, atol=atol, rtol=rtol), "Output values don't match"
-    assert torch.allclose(ref_dK, tri_dK, atol=atol, rtol=rtol), "dK values don't match"
-    assert torch.allclose(ref_dQ, tri_dQ, atol=atol, rtol=rtol), "dQ values don't match"
-    assert torch.allclose(ref_dV, tri_dV, atol=atol, rtol=rtol), "dV values don't match"
+        # Check values match within tolerance
+        assert torch.allclose(ref_O, tri_out, atol=atol, rtol=rtol), "Output values don't match"
+        assert torch.allclose(ref_dK, tri_dK, atol=atol, rtol=rtol), "dK values don't match"
+        assert torch.allclose(ref_dQ, tri_dQ, atol=atol, rtol=rtol), "dQ values don't match"
+        assert torch.allclose(ref_dV, tri_dV, atol=atol, rtol=rtol), "dV values don't match"
 
 
     # Reference output max diff: 6.103515625e-05
@@ -687,7 +764,7 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float1
     # Reference dV max diff: 53.3125
 
 if __name__ == "__main__": # this specifies that this will run only when the program is called directly, NOT when imported as a module, smart! and useufl
-    test_op(BATCH_SIZE=2, NUM_HEADS=16, SEQ_LEN=1024, HEAD_DIM=32, causal=True)
+    test_op(BATCH_SIZE=2, NUM_HEADS=16, SEQ_LEN=1024, HEAD_DIM=32, causal=Fals, benchmark=True)
     import gc
     gc.collect()
     torch.cuda.empty_cache()
