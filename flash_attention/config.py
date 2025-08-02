@@ -6,9 +6,9 @@ AUTOTUNE_CONFIGS = [
             num_stages=num_stages,
             num_warps=num_warps,
         )
-        for BLOCK_SIZE_KV in [16]
-        for BLOCK_SIZE_Q in [32]
-        for num_stages in [3]
-        for num_warps in [2]
+        for BLOCK_SIZE_Q in [64, 128]
+        for BLOCK_SIZE_KV in [32, 64]
+        for num_stages in ([3, 4, 7])
+        for num_warps in [2, 4]
     ]
     
