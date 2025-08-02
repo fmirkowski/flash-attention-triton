@@ -16,10 +16,24 @@ def benchmark_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.f
     dO = torch.randn_like(Q)
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    # warmup:
-
+    
+    # ===== CRITICAL: Proper warmup for both PyTorch and Triton =====
+    print("🔥 Warming up kernels (including Triton autotuning)...")
+    
+    # PyTorch warmup
     for _ in range(10):
         _ = torch.matmul(Q, K.transpose(2, 3))
+    
+    # TRITON WARMUP - This triggers autotuning and caches optimal configs
+    for _ in range(5):
+        # Warmup forward pass
+        tri_out = TritonAttention.apply(Q, K, V, causal, softmax_scale)
+        # Warmup backward pass  
+        tri_out.backward(torch.randn_like(tri_out), retain_graph=True)
+        # Clear gradients
+        V.grad = K.grad = Q.grad = None
+    
+    print("✅ Warmup complete - autotuning cached, ready for fair timing!")
     torch_times_fwd = []
     torch_times_bwd = []
 

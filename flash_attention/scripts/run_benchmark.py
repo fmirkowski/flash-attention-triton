@@ -6,10 +6,10 @@ import torch
 def main():
 
     parser = argparse.ArgumentParser(description="Benchmark Flash Attention")
-    parser.add_argument("--batch-size", type=int, default=2)
-    parser.add_argument("--num-heads", type=int, default=16) 
-    parser.add_argument("--seq-len", type=int, default=1024)
-    parser.add_argument("--head-dim", type=int, default=32)
+    parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--num-heads", type=int, default=8) 
+    parser.add_argument("--seq-len", type=int, default=512)
+    parser.add_argument("--head-dim", type=int, default=64)
     parser.add_argument("--causal", action="store_true")
     
     args = parser.parse_args()
