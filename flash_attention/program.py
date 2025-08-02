@@ -764,7 +764,7 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, benchmark, dtype=t
     # Reference dV max diff: 53.3125
 
 if __name__ == "__main__": # this specifies that this will run only when the program is called directly, NOT when imported as a module, smart! and useufl
-    test_op(BATCH_SIZE=2, NUM_HEADS=16, SEQ_LEN=1024, HEAD_DIM=32, causal=Fals, benchmark=True)
+    test_op(BATCH_SIZE=2, NUM_HEADS=16, SEQ_LEN=1024, HEAD_DIM=32, causal=False, benchmark=True)
     import gc
     gc.collect()
     torch.cuda.empty_cache()
