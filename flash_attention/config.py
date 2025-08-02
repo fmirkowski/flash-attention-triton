@@ -12,15 +12,15 @@ AUTOTUNE_FWD_CONFIGS = [
         for num_warps in [2, 4]
     ]
 
-AUTOTUNE_BWD_CONFIGS = [
-        triton.Config(
-            {"BLOCK_Q": BLOCK_Q, "BLOCK_KV": BLOCK_KV},
-            num_stages=num_stages,
-            num_warps=num_warps,
-        )
-        for BLOCK_Q in [64, 128]
-        for BLOCK_KV in [32, 64]
-        for num_stages in ([3, 4, 7])
-        for num_warps in [2, 4]
-    ]
+# AUTOTUNE_BWD_CONFIGS = [
+#         triton.Config(
+#             {"BLOCK_PROC": BLOCK_PROC, "BLOCK_ITER": BLOCK_ITER},
+#             num_stages=num_stages,
+#             num_warps=num_warps,
+#         )
+#         for BLOCK_PROC in [64, 128]
+#         for BLOCK_ITER in [32, 64]
+#         for num_stages in ([3, 4, 7])
+#         for num_warps in [2, 4]
+#     ]
     

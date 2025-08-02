@@ -86,11 +86,11 @@ class TritonAttention(torch.autograd.Function):
 
         BATCH_SIZE, NUM_HEADS, SEQ_LEN = Q.shape[:3]
         NUM_WARPS, NUM_STAGES = 4, 3
-        # BLOCK_SIZE_MICRO, BLOCK_SIZE_MACRO = 32, 128 # M/4d in the paper, where M is the total capacity for scalars in SRAM
+        BLOCK_SIZE_MICRO, BLOCK_SIZE_MACRO = 32, 128 # M/4d in the paper, where M is the total capacity for scalars in SRAM
 
 
         preprocess_grid = lambda arg: (
-            SEQ_LEN // arg['BLOCK_SIZE_MACRO'],
+            SEQ_LEN // BLOCK_SIZE_MACRO,
             BATCH_SIZE * NUM_HEADS,
             1
         )
@@ -98,8 +98,8 @@ class TritonAttention(torch.autograd.Function):
         
         _attn_bwd_preprocess[preprocess_grid](O=O, dO=dO, D=D, SEQ_LEN=D.shape[-1], BLOCK_SIZE_Q=BLOCK_SIZE_MACRO, HEAD_DIM=ctx.HEAD_DIM)
         
-        dk_dv_grid = lambda args: (
-            SEQ_LEN // args['BLOCK_SIZE_MACRO'],
+        dk_dv_grid = (
+            SEQ_LEN // BLOCK_SIZE_MACRO,
             1,
             NUM_HEADS*BATCH_SIZE,
         )
@@ -123,8 +123,8 @@ class TritonAttention(torch.autograd.Function):
             stride_dim=K.stride(3),
             NUM_HEADS=NUM_HEADS,
             SEQ_LEN=SEQ_LEN,
-            # BLOCK_Q=BLOCK_SIZE_MICRO,
-            # BLOCK_KV=BLOCK_SIZE_MACRO,
+            BLOCK_Q=BLOCK_SIZE_MICRO,
+            BLOCK_KV=BLOCK_SIZE_MACRO,
             HEAD_DIM=ctx.HEAD_DIM,
             STAGE=stage,)
         
@@ -146,8 +146,8 @@ class TritonAttention(torch.autograd.Function):
             stride_dim=K.stride(3),
             NUM_HEADS=NUM_HEADS,
             SEQ_LEN=SEQ_LEN,
-            # BLOCK_Q=BLOCK_SIZE_MACRO,
-            # BLOCK_KV=BLOCK_SIZE_MICRO,
+            BLOCK_Q=BLOCK_SIZE_MACRO,
+            BLOCK_KV=BLOCK_SIZE_MICRO,
             HEAD_DIM=ctx.HEAD_DIM,
             STAGE=stage,)
 

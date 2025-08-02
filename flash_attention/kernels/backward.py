@@ -2,7 +2,7 @@ import torch
 import os
 import triton
 import triton.language as tl
-from ..config import AUTOTUNE_BWD_CONFIGS
+# from ..config import AUTOTUNE_BWD_CONFIGS
 
 
 
@@ -28,7 +28,7 @@ def _attn_bwd_preprocess(O, dO, D, SEQ_LEN, BLOCK_SIZE_Q: tl.constexpr, HEAD_DIM
     # Pre process keernel , load programs, load manually the blocks O, dO, gt to th right points to whatg w want to operate with 
     # Why do we need to do it tho?
 
-@triton.autotune(AUTOTUNE_BWD_CONFIGS, key=["SEQ_LEN", "HEAD_DIM"])
+
 @triton.jit
 def _attn_bwd_dk_dv(
     Q, 
@@ -125,7 +125,7 @@ def _attn_bwd_dk_dv(
 
 
 
-@triton.autotune(AUTOTUNE_BWD_CONFIGS, key=["SEQ_LEN", "HEAD_DIM"])
+# @triton.autotune(AUTOTUNE_BW/D_CONFIGS, key=["SEQ_LEN", "HEAD_DIM"])
 @triton.jit
 def _attn_bwd_dq(Q,
     K,
