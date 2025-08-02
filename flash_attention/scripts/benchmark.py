@@ -12,8 +12,8 @@ def benchmark_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.f
     V = torch.empty(
         (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM), dtype=dtype, device='cuda'
                     ).normal_(mean=0.0, std=0.5).requires_grad_()
-    softmax_scale = 1 / (HEAD_DIM**0.5)
-    dO = torch.randn_like(Q)
+    # softmax_scale = 1 / (HEAD_DIM**0.5)
+    # dO = torch.randn_like(Q)
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     

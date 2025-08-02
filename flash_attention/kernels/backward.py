@@ -125,7 +125,7 @@ def _attn_bwd_dk_dv(
 
 
 
-
+@triton.autotune(AUTOTUNE_BWD_CONFIGS, key=["SEQ_LEN", "HEAD_DIM"])
 @triton.jit
 def _attn_bwd_dq(Q,
     K,
