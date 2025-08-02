@@ -1,6 +1,6 @@
 import torch
 import triton
-from ops.attention import TritonAttention
+from ..ops.attention import TritonAttention
 
 def benchmark_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.float16):
     Q = torch.empty(
@@ -15,7 +15,7 @@ def benchmark_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.f
     softmax_scale = 1 / (HEAD_DIM**0.5)
     dO = torch.randn_like(Q)
     
-    device = 'cuda' if torch.cuda.is_available else 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # warmup:
 
     for _ in range(10):

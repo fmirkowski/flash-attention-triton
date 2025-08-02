@@ -1,4 +1,4 @@
-from benchmark import benchmark_op
+from .benchmark import benchmark_op
 import gc
 import argparse
 import torch
@@ -18,7 +18,6 @@ def main():
         print("CUDA not available, skipping benchmark")
         return
 
-    batc
     print(f"\n=== Testing {args.batch_size}x{args.num_heads}x{args.seq_len}x{args.head_dim} ===")
 
     

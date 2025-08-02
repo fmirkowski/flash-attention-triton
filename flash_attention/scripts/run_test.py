@@ -1,5 +1,4 @@
 import torch
-import triton
 import argparse
 from ..ops.attention import TritonAttention
 
@@ -31,7 +30,7 @@ def run_test():
     softmax_scale = 1 / (HEAD_DIM**0.5)
     dO = torch.randn_like(Q)
 
-    device = 'cuda' if torch.cuda.is_available else 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
         # warmup:
 
 
@@ -89,7 +88,7 @@ def run_test():
     assert ref_dQ.shape == tri_dQ.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM) 
     assert ref_dV.shape == tri_dV.shape == (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM)
 
-    Check mask consistency
+    # Check mask consistency
     if causal:
         mask_sum = MASK.sum()
         expected_sum = (SEQ_LEN * (SEQ_LEN + 1)) / 2  # Sum of lower triangular matrix
@@ -100,4 +99,7 @@ def run_test():
     print("Reference dK max diff:", (ref_dK - tri_dK).abs().max().item()) 
     print("Reference dQ max diff:", (ref_dQ - tri_dQ).abs().max().item())
     print("Reference dV max diff:", (ref_dV - tri_dV).abs().max().item())
+
+if __name__ == "__main__":
+    run_test()
 
