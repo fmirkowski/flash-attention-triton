@@ -44,11 +44,12 @@ def _attn_fwd_inner(O_block,
             mask = offsets_q[:, None] >= (start_kv + offsets_kv)[None, :] # because we're iterating on many blocks
             QK_block = QK_block * softmax_scale + tl.where(mask, 0, -1.0e6) # we need a float and tl.where creates a this, 1, BLOCK_SIZE vector
             m_ij = tl.maximum(m_i, tl.max(QK_block, axis=1))
+            QK_block -= m_ij[:, None]
         else: 
-            QK_block = QK_block * softmax_scale
-            m_ij = tl.maximum(m_i, tl.max(QK_block, axis=1))
+            m_ij = tl.maximum(m_i, tl.max(QK_block, axis=1) * softmax_scale)
+            QK_block = QK_block * softmax_scale - m_ij[:, None]
 
-        P_block = tl.math.exp(QK_block - m_ij[:, None])
+        P_block = tl.math.exp(QK_block)
         alpha = tl.math.exp((m_i - m_ij))
         l_i = l_i * alpha + tl.sum(P_block, 1)
         
@@ -238,8 +239,8 @@ def _attn_bwd_preprocess(O, dO, D, SEQ_LEN, BLOCK_SIZE_Q: tl.constexpr, HEAD_DIM
     O += batch_head_index * SEQ_LEN * HEAD_DIM
     D += batch_head_index * SEQ_LEN
     dO += batch_head_index * SEQ_LEN * HEAD_DIM
-    dO += block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None] * HEAD_DIM + tl.arange(0, HEAD_DIM)[None, :]
-    O += block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None] * HEAD_DIM + tl.arange(0, HEAD_DIM)[None, :]
+    dO += (block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None]) * HEAD_DIM + tl.arange(0, HEAD_DIM)[None, :]
+    O += (block_index * BLOCK_SIZE_Q + tl.arange(0, BLOCK_SIZE_Q)[:, None]) * HEAD_DIM + tl.arange(0, HEAD_DIM)[None, :]
 
     # D_block = tl.load(D).to(tl.float32) No need to load D we dont need its contents, its just a mem pinter for us
     O_block = tl.load(O).to(tl.float32)
@@ -297,7 +298,7 @@ def _attn_bwd_dk_dv(
 
     # we need to add the arange because block_index_kv * BLOCK_KV (specific row, where it starts) + tl.arange(0, BLOCK_KV)[:, None] – specyfing all rows that we will need to cover * stride_seq – specific memory addresses of those rows
     offsets_dim = tl.arange(0, HEAD_DIM)
-    kv_start_block =  block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV)[:, None] * stride_seq # START ARANGE FROM 0 
+    kv_start_block =  block_index_kv * BLOCK_KV + tl.arange(0, BLOCK_KV)[:, None]) * stride_seq # START ARANGE FROM 0 
     K_block = tl.load(K+kv_start_block + offsets_dim[None, :] * stride_dim) # creates a 2D set of addresses of the block with the addtition!
     V_block = tl.load(V+kv_start_block + offsets_dim[None, :] * stride_dim)
     dK_block = tl.zeros_like(K_block).to(tl.float32)
