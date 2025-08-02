@@ -631,13 +631,13 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, benchmark, dtype=t
             _ = torch.matmul(Q, K.transpose(2, 3))
         torch_times_fwd = []
         torch_times_bwd = []
-        torch.cuda.synchronize()
 
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        torch.cuda.synchronize()
         for _ in range(500):
             torch.cuda.synchronize()
             V.grad = K.grad = Q.grad = None
-            start_event = torch.cuda.Event(enable_timing=True)
-            end_event = torch.cuda.Event(enable_timing=True)
 
             start_event.record()
             softmax_scale = 1 / (HEAD_DIM**0.5)
@@ -668,8 +668,8 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, benchmark, dtype=t
         for _ in range(500):
             torch.cuda.synchronize()
             V.grad = K.grad = Q.grad = None
-            start_event = torch.cuda.Event(enable_timing=True)
-            end_event = torch.cuda.Event(enable_timing=True)
+            # start_event = torch.cuda.Event(enable_timing=True)
+            # end_event = torch.cuda.Event(enable_timing=True)
 
             start_event.record()
             tri_out = TritonAttention.apply(Q, K, V, causal, softmax_scale).half()
@@ -678,6 +678,7 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, benchmark, dtype=t
             torch.cuda.synchronize()
             triton_times_fwd.append(start_event.elapsed_time(end_event))
 
+            
 
             start_event.record()
             tri_out.backward(dO)
