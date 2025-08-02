@@ -53,9 +53,9 @@ def _attn_fwd_inner(O_block,
         l_i = l_i * alpha + tl.sum(P_block, 1)
         
         V_block = tl.load(V_block_ptr)
-        P_block = P_block.to(tl.float16)
+        # P_block = P_block
         O_block = O_block * alpha[:, None] # in the first iteration it will still be zeros but then it will update
-        O_block = tl.dot(P_block, V_block, O_block) # equivalent too O*alpha + P @ V
+        O_block = tl.dot(P_block, V_block.to(tl.float32), O_block) # equivalent too O*alpha + P @ V
 
         m_i = m_ij
 
@@ -277,7 +277,7 @@ def _attn_bwd_dk_dv(
     
     # use comments for visualising shapes of what we actually process
     block_index_kv = tl.program_id(0)
-    batch_head_index = tl.program_id(1)
+    batch_head_index = tl.program_id(2)
     
     batch_index = batch_head_index // NUM_HEADS
     head_index = batch_head_index % NUM_HEADS
@@ -325,9 +325,9 @@ def _attn_bwd_dk_dv(
             pT = tl.where(mask, pT, 0.0)
         dO_block = tl.load(dO_ptrs)
         # formula for d_Vblock form paper
-        dV_block += tl.dot(pT, dO_block.to(tl.float32)).to(tl.float32)
+        dV_block += tl.dot(pT, dO_block.to(tl.float32))
         D_block = tl.load(D+offsets_q)
-        dpT = tl.dot(V_block, tl.trans(dO_block)).to(tl.float32)
+        dpT = tl.dot(V_block, tl.trans(dO_block))
         dS_T = pT * (dpT - D_block)
         dK_block += softmax_scale * tl.dot(dS_T, tl.trans(qT_block).to(tl.float32)) # float32?
         
@@ -375,7 +375,7 @@ def _attn_bwd_dq(Q,
 
     # use comments for visualising shapes of what we actually process
     block_index_q = tl.program_id(0)
-    batch_head_index = tl.program_id(1)
+    batch_head_index = tl.program_id(2)
     
     batch_index = batch_head_index // NUM_HEADS
     head_index = batch_head_index % NUM_HEADS
@@ -553,8 +553,8 @@ class TritonAttention(torch.autograd.Function):
         
         dk_dv_grid = (
             SEQ_LEN // BLOCK_SIZE_MACRO, # why micro th?
+            1,
             NUM_HEADS*BATCH_SIZE,
-            1
         )
 
         stage = 3 if ctx.causal else 1
