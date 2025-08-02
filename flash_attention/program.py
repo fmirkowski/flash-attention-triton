@@ -662,8 +662,8 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, benchmark, dtype=t
             torch.cuda.synchronize()
             torch_times_bwd.append(start_event.elapsed_time(end_event))
 
-        torch_times_fwd = []
-        torch_times_bwd = []
+        triton_times_fwd = []
+        triton_times_bwd = []
 
         for _ in range(100):
             torch.cuda.synchronize()
