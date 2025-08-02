@@ -1,6 +1,6 @@
 
 
-*Easy and hackable implementation of FlashAttention in Triton kernels
+#Easy and hackable implementation of FlashAttention in Triton kernel
 
 ---
 
