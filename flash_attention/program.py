@@ -627,13 +627,13 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, benchmark, dtype=t
     device = 'cuda' if torch.cuda.is_available else 'cpu'
     # warmup:
     if benchmark:
-        for _ in range(100):
+        for _ in range(10):
             _ = torch.matmul(Q, K.transpose(2, 3))
         torch_times_fwd = []
         torch_times_bwd = []
         torch.cuda.synchronize()
 
-        for _ in range(1000):
+        for _ in range(500):
             torch.cuda.synchronize()
             V.grad = K.grad = Q.grad = None
             start_event = torch.cuda.Event(enable_timing=True)
@@ -665,7 +665,7 @@ def test_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, benchmark, dtype=t
         triton_times_fwd = []
         triton_times_bwd = []
 
-        for _ in range(1000):
+        for _ in range(500):
             torch.cuda.synchronize()
             V.grad = K.grad = Q.grad = None
             start_event = torch.cuda.Event(enable_timing=True)
