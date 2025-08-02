@@ -2,7 +2,7 @@ import torch
 import os
 import triton
 import triton.language as tl
-from ..config import AUTOTUNE_CONFIGS
+from ..config import AUTOTUNE_FWD_CONFIGS
 
 
 
@@ -65,7 +65,7 @@ def _attn_fwd_inner(O_block,
     return O_block, l_i, m_i
 
 
-@triton.autotune(AUTOTUNE_CONFIGS, key=["SEQ_LEN", "HEAD_DIM"])
+@triton.autotune(AUTOTUNE_FWD_CONFIGS, key=["SEQ_LEN", "HEAD_DIM"])
 @triton.jit
 def _attn_fwd(Q, K, V, O, M, softmax_scale, causal, #pointers
                 stride_Q_batch, stride_Q_heads, stride_Q_seq, stride_Q_dim,

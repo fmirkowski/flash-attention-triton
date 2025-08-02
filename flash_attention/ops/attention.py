@@ -86,7 +86,7 @@ class TritonAttention(torch.autograd.Function):
 
         BATCH_SIZE, NUM_HEADS, SEQ_LEN = Q.shape[:3]
         NUM_WARPS, NUM_STAGES = 4, 3
-        BLOCK_SIZE_MICRO, BLOCK_SIZE_MACRO = 16, 32 # M/4d in the paper, where M is the total capacity for scalars in SRAM
+        BLOCK_SIZE_MICRO, BLOCK_SIZE_MACRO = 32, 128 # M/4d in the paper, where M is the total capacity for scalars in SRAM
 
 
         preprocess_grid = lambda arg: (
