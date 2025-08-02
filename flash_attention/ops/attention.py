@@ -90,7 +90,7 @@ class TritonAttention(torch.autograd.Function):
 
 
         preprocess_grid = lambda arg: (
-            SEQ_LEN // BLOCK_SIZE_MACRO,
+            SEQ_LEN // arg['BLOCK_SIZE_MACRO'],
             BATCH_SIZE * NUM_HEADS,
             1
         )
@@ -98,8 +98,8 @@ class TritonAttention(torch.autograd.Function):
         
         _attn_bwd_preprocess[preprocess_grid](O=O, dO=dO, D=D, SEQ_LEN=D.shape[-1], BLOCK_SIZE_Q=BLOCK_SIZE_MACRO, HEAD_DIM=ctx.HEAD_DIM)
         
-        dk_dv_grid = (
-            SEQ_LEN // BLOCK_SIZE_MACRO,
+        dk_dv_grid = lambda args: (
+            SEQ_LEN // args['BLOCK_SIZE_MACRO'],
             1,
             NUM_HEADS*BATCH_SIZE,
         )
