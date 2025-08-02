@@ -12,7 +12,7 @@ def benchmark_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.f
     V = torch.empty(
         (BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM), dtype=dtype, device='cuda'
                     ).normal_(mean=0.0, std=0.5).requires_grad_()
-    # softmax_scale = 1 / (HEAD_DIM**0.5)
+    softmax_scale = 1 / (HEAD_DIM**0.5)
     # dO = torch.randn_like(Q)
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -25,7 +25,7 @@ def benchmark_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.f
         _ = torch.matmul(Q, K.transpose(2, 3))
     
     # TRITON WARMUP - This triggers autotuning and caches optimal configs
-    for _ in range(5):
+    for _ in range(10):
         # Warmup forward pass
         tri_out = TritonAttention.apply(Q, K, V, causal, softmax_scale)
         # Warmup backward pass  
