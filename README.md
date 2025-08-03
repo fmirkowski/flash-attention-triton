@@ -13,9 +13,19 @@
 
 This implementation provides a complete Flash Attention implementation using Triton. It's designed to be educational and hackable –– feel free to experiment, copy and modify it!
 
+
+
+
+<br/>
+
 <div align="center">
 <img src="./data/naive_vs_triton_forward.png" alt="Forward Pass Performance Comparison" width="600">
 </div>
+
+<br/>
+
+
+
 
 There are many possible optimizations that could still be done, such as:
 - Backward pass autotuning
@@ -23,7 +33,7 @@ There are many possible optimizations that could still be done, such as:
 
 Didn't spend much time on this, but I tried to keep the code as clean and understandable as possible to make it a useful educational resource (it really helped me get a much stronger grasp of Triton!).
 
-All performance evaluations were done using CUDA Events wrappers on a single NVIDIA H100 SXM GPU.
+All basic evals were done using CUDA Events wrappers on a single NVIDIA H100 SXM GPU.
 
 
 ## Quick Usage Guide
