@@ -1,15 +1,18 @@
 
 
+<div align="center">
+
 # Easy and hackable implementation of FlashAttention in Triton kernels
 
+</div>
 
 
 
-## Quick Usage Guide 
 
 ###  Overview
 
-This implementation provides a complete Flash Attention implementation using Triton. Feel free to use it, learn from it, modify it, and adapt it for your own needs - it's meant to be an educational resource that helped me understand Triton better and hopefully can help others too!
+This implementation provides a complete Flash Attention implementation using Triton. It really helped me to get a stronger grasp of Triton –– feel free to experiment, copy and modify it!
+## Quick Usage Guide
 
 ```
 flash_attention/
