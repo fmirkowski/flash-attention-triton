@@ -11,7 +11,13 @@
 
 ###  Overview
 
-This implementation provides a complete Flash Attention implementation using Triton. It really helped me to get a stronger grasp of Triton –– feel free to experiment, copy and modify it!
+This implementation provides a complete Flash Attention implementation using Triton. It's designed to be educational and hackable –– feel free to experiment, copy and modify it!
+
+There are many possible optimizations that could still be done, such as:
+- Backward pass autotuning
+- Optimizing causal attention to skip tokens that don't contribute to dK, dV and dQ gradients
+
+I tried to keep the code as clean and understandable as possible to make it a useful educational resource (it really helped me get a stronger grasp of Triton!). All performance evaluations were done using CUDA Events wrappers on a single NVIDIA H100 SXM GPU.
 ## Quick Usage Guide
 
 ```
