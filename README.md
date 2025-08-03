@@ -17,7 +17,7 @@
 
 <div align="center">
 
-## 📊 Benchmark Summary
+## Benchmark Summary
 
 | Operation | PyTorch (ms) | Triton (ms) | **Speedup** |
 |-----------|--------------|-------------|-------------|
@@ -28,6 +28,7 @@
 > **Hardware:** 1x NVIDIA H100 SXM  
 > **Configuration:** Batch=4, Heads=8, SeqLen=512, HeadDim=64  
 > **Autotuning:** Enabled for forward pass
+> **(Measured using basic CUDA Events wrapper)**
 
 </div>
 
