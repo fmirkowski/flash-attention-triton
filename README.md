@@ -3,38 +3,50 @@
 # Easy and hackable implementation of FlashAttention in Triton kernels
 
 
-<div align="center">
-
-##  Performance Results!
-
-### Execution Time Comparison
-<img src="data/flash_attention_execution_times.png" width="600"/>
-
-### Speedup  
-<img src="data/flash_attention_speedup.png" width="600"/>
-
-</div>
-
-
-## Benchmark Summary
-
-| Operation | PyTorch (ms) | Triton (ms) | **Speedup** |
-|-----------|--------------|-------------|-------------|
-| Forward   | 4.586        | 0.105       | **43.7x**   |
-| Backward  | 1.177        | 0.229       | **5.1x**    |
-| **Total** | **5.763**    | **0.334**   | **17.3x**   |
-
-> **Hardware:** 1x NVIDIA H100 SXM  
-> **Configuration:** Batch=4, Heads=8, SeqLen=512, HeadDim=64  
-> **Autotuning:** Enabled for forward pass
-> **Timing:** Measured using CUDA Events wrapper against a naive torch implementation
-
-
-
-
 
 
 ## Quick Usage Guide 
+
+###  Overview
+
+This implementation provides a complete Flash Attention implementation using Triton. Feel free to use it, learn from it, modify it, and adapt it for your own needs - it's meant to be an educational resource that helped me understand Triton better and hopefully can help others too!
+
+```
+flash_attention/
+├── ops/
+│   └── attention.py          # High-level API - main entry point for Flash Attention
+├── kernels/
+│   ├── forward.py           # Triton forward pass kernel implementation
+│   ├── backward.py          # Triton backward pass kernel implementation
+│   └── __init__.py
+├── scripts/
+│   ├── benchmark.py         # Performance benchmarking tools
+│   ├── run_test.py         # Correctness testing
+│   └── run_benchmark.py    # Benchmark runner
+└── config.py               # Autotuning configurations for optimal performance
+```
+
+### Key Files
+
+#### **High-Level API**
+- **`flash_attention/ops/attention.py`** - This is the **main entry point** and high-level API for the entire Flash Attention mechanism. It contains:
+  - `TritonAttention` class that orchestrates the complete forward/backward pass
+  - Tensor shape validation and memory management
+  - Integration bridge between PyTorch autograd and low-level Triton kernels
+  - Grid configuration for parallel execution across sequence blocks
+
+#### **Low-Level Triton Kernels**
+- **`flash_attention/kernels/`** - Contains the actual Triton kernel implementations that perform the core Flash Attention computations:
+  - **`forward.py`** - Triton kernel for memory-efficient forward pass with online softmax
+  - **`backward.py`** - Triton kernel for backward pass gradient computation
+  - These kernels implement the block-wise attention algorithm that reduces memory complexity from O(N²) to O(N)
+
+#### **Configuration & Optimization**
+- **`flash_attention/config.py`** - Autotuning configurations with different block sizes, warp counts, and pipeline stages for optimal hardware utilization
+
+
+
+## Usage Guide
 
 ### Run Tests
 ```bash

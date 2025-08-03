@@ -40,13 +40,13 @@ def benchmark_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.f
     print("✅ Warmup complete - autotuning cached, ready for fair timing!")
     
     # Pre-create mask outside timing loop for fair naive comparison
-    MASK = torch.tril(torch.ones(SEQ_LEN, SEQ_LEN)).to(device)
     
     torch_naive_times_fwd = []
     torch_naive_times_bwd = []
     torch_opt_times_fwd = []
     torch_opt_times_bwd = []
-
+    # Clear CUDA cache before benchmarking
+    # torch.cuda.empty_cache()
     start_event = torch.cuda.Event(enable_timing=True)
     end_event = torch.cuda.Event(enable_timing=True)
     
@@ -62,6 +62,7 @@ def benchmark_op(BATCH_SIZE, NUM_HEADS, SEQ_LEN, HEAD_DIM, causal, dtype=torch.f
         # Naive torch implementation
         P = torch.matmul(Q, K.transpose(2,3)) * softmax_scale
         if causal:
+            MASK = torch.tril(torch.ones(SEQ_LEN, SEQ_LEN)).to(device)
             P[:, :, MASK == 0] = float('-inf')
         P = torch.softmax(P, dim=-1).half()
         naive_O = torch.matmul(P, V)
