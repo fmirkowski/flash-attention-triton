@@ -22,6 +22,13 @@ def main():
 
     
     benchmark_op(BATCH_SIZE=args.batch_size, NUM_HEADS=args.num_heads, SEQ_LEN=args.seq_len, HEAD_DIM=args.head_dim, causal=args.causal)
+    
+    print(f"\n{'='*60}")
+    print(f"Benchmark completed!")
+    print(f"Note: 'Naive PyTorch' is for educational comparison")
+    print(f"'Optimized PyTorch' is the fair baseline (SDPA)")
+    print(f"{'='*60}")
+    
     gc.collect()
     torch.cuda.empty_cache()
 

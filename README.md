@@ -15,7 +15,6 @@
 
 </div>
 
-<div align="center">
 
 ## Benchmark Summary
 
@@ -28,14 +27,14 @@
 > **Hardware:** 1x NVIDIA H100 SXM  
 > **Configuration:** Batch=4, Heads=8, SeqLen=512, HeadDim=64  
 > **Autotuning:** Enabled for forward pass
-> **(Measured using basic CUDA Events wrapper)**
-
-</div>
+> **Timing:** Measured using CUDA Events wrapper against a naive torch implementation
 
 
 
 
-## Usage Guide 
+
+
+## Quick Usage Guide 
 
 ### Run Tests
 ```bash
