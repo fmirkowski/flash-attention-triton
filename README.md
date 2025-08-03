@@ -4,13 +4,13 @@
 
 ---
 
-##  Performance Results
+##  Performance Results!
 
 ### Execution Time Comparison
-![Flash Attention Execution Times](data/flash_attention_execution_times.png)
+<img src="data/flash_attention_execution_times.png" width="600"/>
 
-### Speedup Analysis  
-![Flash Attention Speedup](data/flash_attention_speedup.png)
+### Speedup  
+<img src="data/flash_attention_speedup.png" width="600"/>
 
 ---
 
@@ -25,4 +25,3 @@
 > **Hardware:** 1x NVIDIA H100 SXM  
 > **Configuration:** Batch=4, Heads=8, SeqLen=512, HeadDim=64  
 > **Autotuning:** Enabled for forward pass
-
