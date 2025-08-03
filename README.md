@@ -7,10 +7,14 @@
 ##  Performance Results!
 
 ### Execution Time Comparison
-<img src="data/flash_attention_execution_times.png" width="600"/>
+<p align="center">
+  <img src="data/flash_attention_execution_times.png" width="600"/>
+</p>
 
 ### Speedup  
-<img src="data/flash_attention_speedup.png" width="600"/>
+<p align="center">
+  <img src="data/flash_attention_speedup.png" width="600"/>
+</p>
 
 ---
 
