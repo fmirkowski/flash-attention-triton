@@ -14,7 +14,7 @@
 This implementation provides a complete Flash Attention implementation using Triton. It's designed to be educational and hackable –– feel free to experiment, copy and modify it!
 
 <div align="center">
-<img src="data/naive_vs_triton_forward.png">
+<img src="./data/naive_vs_triton_forward.png" alt="Forward Pass Performance Comparison" width="600">
 </div>
 
 There are many possible optimizations that could still be done, such as:
