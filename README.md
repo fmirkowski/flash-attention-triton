@@ -4,17 +4,17 @@
 
 ---
 
+<div align="center">
+
 ##  Performance Results!
 
 ### Execution Time Comparison
-<p align="center">
-  <img src="data/flash_attention_execution_times.png" width="600"/>
-</p>
+<img src="data/flash_attention_execution_times.png" width="600"/>
 
 ### Speedup  
-<p align="center">
-  <img src="data/flash_attention_speedup.png" width="600"/>
-</p>
+<img src="data/flash_attention_speedup.png" width="600"/>
+
+</div>
 
 ---
 
