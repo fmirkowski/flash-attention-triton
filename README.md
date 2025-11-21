@@ -11,7 +11,7 @@
 
 ###  Overview
 
-This implementation provides a complete Flash Attention implementation using Triton. It's designed to be educational and hackable –– feel free to experiment, copy and modify it!
+This implementation provides a complete Flash Attention implementation using Triton. It's designed to be educational and hackable (i.e. I didn't have much time to commit to it 😁) – feel free to experiment, copy and modify it!
 
 
 
@@ -24,36 +24,11 @@ This implementation provides a complete Flash Attention implementation using Tri
 
 <br/>
 
-
-
-
-There are many possible optimizations that could still be done, such as:
-- Backward pass autotuning
-- Optimizing causal attention to skip tokens that don't contribute to dK, dV and dQ gradients
-
-Didn't spend much time on this, but I tried to keep the code as clean and understandable as possible to make it a useful educational resource (it really helped me get a much stronger grasp of Triton!).
+Tho of course not sota, i tried to keep the code as clean and understandable as possible to make it a useful educational resource (it really helped me get a much stronger grasp of Triton!).
 
 All basic evals were done using CUDA Events wrappers on a single NVIDIA H100 SXM GPU.
 
-
-## Quick Usage Guide
-
-```
-flash_attention/
-├── ops/
-│   └── attention.py          # High-level API - main entry point for Flash Attention
-├── kernels/
-│   ├── forward.py           # Triton forward pass kernel implementation
-│   ├── backward.py          # Triton backward pass kernel implementation
-│   └── __init__.py
-├── scripts/
-│   ├── benchmark.py         # Performance benchmarking tools
-│   ├── run_test.py         # Correctness testing
-│   └── run_benchmark.py    # Benchmark runner
-└── config.py               # Autotuning configurations for optimal performance
-```
-
-### Key Files
+### Key files to get started on
 
 #### **High-Level API**
 - **`flash_attention/ops/attention.py`** - This is the **main entry point** and high-level API for the entire Flash Attention mechanism. It contains:
@@ -62,7 +37,7 @@ flash_attention/
   - Integration bridge between PyTorch autograd and low-level Triton kernels
   - Grid configuration for parallel execution across sequence blocks
 
-#### **Low-Level Triton Kernels**
+#### **Lower-Level Triton Kernels**
 - **`flash_attention/kernels/`** - Contains the actual Triton kernel implementations that perform the core Flash Attention computations:
   - **`forward.py`** - Triton kernel for memory-efficient forward pass with online softmax
   - **`backward.py`** - Triton kernel for backward pass gradient computation
@@ -112,7 +87,7 @@ python -m flash_attention.scripts.run_benchmark \
 | `--causal` | False | Enable causal masking |
 
 ### Requirements
-- CUDA-compatible GPU
+- cuda
 - Python 3.8+
 - PyTorch 2.4.1+
 - Triton 3.0.0
